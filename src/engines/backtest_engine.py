@@ -373,7 +373,7 @@ class BacktestEngine:
             'sortino_ratio': sortino if not pd.isna(sortino) else 0.0,
             'calmar_ratio': calmar if not pd.isna(calmar) else 0.0,
             'max_drawdown': max_dd,
-            'max_dd_duration': int(dd_duration),
+            'max_dd_duration': int(dd_duration) if not pd.isna(dd_duration) else 0,
             'total_trades': n_trades,
             'win_rate': win_rate,
             'avg_win': avg_win,

@@ -112,6 +112,95 @@ def detect_regime(regime_score: float) -> str:
         return 'SIDEWAYS'
 
 
+def calculate_volatility(closes, period: int = 20) -> float:
+    """
+    Calculate annualized volatility from close prices.
+
+    Args:
+        closes: Close price series (backtesting _Array)
+        period: Lookback period for volatility calculation
+
+    Returns:
+        Annualized volatility as percentage (e.g., 0.30 for 30%)
+    """
+    # Convert to list if needed
+    if len(closes) < period + 1:
+        return 0.2  # Default volatility
+
+    # Calculate returns for last 'period' bars
+    returns = []
+    for i in range(max(0, len(closes) - period), len(closes)):
+        if i > 0:
+            ret = (closes[i] - closes[i-1]) / closes[i-1]
+            returns.append(ret)
+
+    if len(returns) == 0:
+        return 0.2
+
+    # Calculate standard deviation
+    import numpy as np
+    vol_std = np.std(returns)
+
+    # Annualize (252 trading days)
+    vol_annual = vol_std * np.sqrt(252)
+
+    return float(vol_annual)
+
+
+def get_dynamic_thresholds(volatility: float):
+    """
+    Calculate dynamic entry/exit thresholds based on volatility.
+
+    Logic:
+    - Low volatility (< 20%): Standard thresholds (more selective)
+    - Medium volatility (20-50%): Relaxed thresholds
+    - High volatility (50-80%): Very relaxed thresholds
+    - Extreme volatility (> 80%): Aggressive thresholds (for volatile stocks)
+
+    Args:
+        volatility: Annualized volatility (e.g., 0.30 for 30%)
+
+    Returns:
+        Dictionary with dynamic thresholds
+    """
+    if volatility < 0.20:
+        # Low volatility - Standard thresholds
+        return {
+            'aggressive_entry': 0.2,
+            'aggressive_exit': -0.3,
+            'defensive_short': -0.8,
+            'defensive_cover': 0.3,
+            'position_multiplier': 1.0
+        }
+    elif volatility < 0.50:
+        # Medium volatility - Relaxed thresholds
+        return {
+            'aggressive_entry': 0.1,
+            'aggressive_exit': -0.2,
+            'defensive_short': -0.6,
+            'defensive_cover': 0.2,
+            'position_multiplier': 0.9
+        }
+    elif volatility < 0.80:
+        # High volatility - Very relaxed thresholds
+        return {
+            'aggressive_entry': 0.0,
+            'aggressive_exit': -0.1,
+            'defensive_short': -0.4,
+            'defensive_cover': 0.1,
+            'position_multiplier': 0.7
+        }
+    else:
+        # Extreme volatility - Aggressive thresholds for small caps
+        return {
+            'aggressive_entry': -0.1,  # Allow buy even with slightly negative sentiment
+            'aggressive_exit': -0.3,
+            'defensive_short': -0.3,
+            'defensive_cover': 0.1,
+            'position_multiplier': 0.5  # Smaller position size for extreme vol
+        }
+
+
 # ============================================================================
 # MAIN STRATEGY CLASS
 # ============================================================================
@@ -146,15 +235,34 @@ class AdaptiveStrategy(Strategy):
     mr_lookback = MeanReversionMode.LOOKBACK_PERIOD
     mr_size = MeanReversionMode.POSITION_SIZE
 
+    # Dynamic threshold settings
+    use_dynamic_thresholds = True  # Set to False to use fixed thresholds
+
     def init(self):
         """
         Initialize strategy indicators.
         This is called once before backtest starts.
         """
-        # Extract AI signals from data
-        # The backtesting library provides access via self.data
-        self.regime_score = self.data.AI_Regime_Score
-        self.sentiment = self.data.AI_Stock_Sentiment
+        # NOTE: We don't store AI signal arrays here.
+        # The backtesting library slices arrays based on current bar index.
+        # We access them directly through self.data in each method to get
+        # the properly sliced version for the current bar.
+
+        # Calculate market volatility
+        self.volatility = calculate_volatility(self.data.Close)
+
+        # Get dynamic thresholds based on volatility
+        if self.use_dynamic_thresholds:
+            self.dynamic_thresholds = get_dynamic_thresholds(self.volatility)
+        else:
+            # Use fixed thresholds (original behavior)
+            self.dynamic_thresholds = {
+                'aggressive_entry': AggressiveMode.SENTIMENT_ENTRY,
+                'aggressive_exit': AggressiveMode.SENTIMENT_EXIT,
+                'defensive_short': DefensiveMode.SENTIMENT_SHORT,
+                'defensive_cover': DefensiveMode.SENTIMENT_COVER,
+                'position_multiplier': 1.0
+            }
 
         # Calculate support/resistance for mean reversion mode
         self.support, self.resistance = calculate_support_resistance(
@@ -179,8 +287,8 @@ class AdaptiveStrategy(Strategy):
         Returns:
             One of: 'BULLISH', 'BEARISH', 'SIDEWAYS'
         """
-        # Get the most recent regime score
-        latest_regime = self.regime_score[-1]
+        # Access directly through self.data to get properly sliced array
+        latest_regime = self.data.AI_Regime_Score[-1]
         return detect_regime(latest_regime)
 
     def execute_aggressive_mode(self):
@@ -189,22 +297,29 @@ class AdaptiveStrategy(Strategy):
         ===============================
         Logic: Market is trending up, be aggressive with long positions.
 
-        Entry:  AI_Stock_Sentiment > threshold (0.2)
-        Exit:   AI_Stock_Sentiment < exit_threshold (-0.3)
-        Size:   Large (95% of equity)
+        Entry:  AI_Stock_Sentiment > dynamic_threshold
+        Exit:   AI_Stock_Sentiment < dynamic_exit_threshold
+        Size:   Adjusted based on volatility
 
         This is a "momentum-within-trend" approach.
         """
-        current_sentiment = self.sentiment[-1]
+        # Access sentiment directly through self.data for properly sliced array
+        current_sentiment = self.data.AI_Stock_Sentiment[-1]
+
+        # Get dynamic thresholds
+        entry_threshold = self.dynamic_thresholds['aggressive_entry']
+        exit_threshold = self.dynamic_thresholds['aggressive_exit']
+        pos_multiplier = self.dynamic_thresholds['position_multiplier']
 
         # ENTRY LOGIC: Strict numerical comparison
-        if current_sentiment > self.aggressive_sentiment_entry:
+        if current_sentiment > entry_threshold:
             if not self.position:
-                self.buy(size=self.aggressive_size)
+                size = self.aggressive_size * pos_multiplier
+                self.buy(size=min(size, 0.95))  # Cap at 95%
                 self.regime_trades['BULLISH'] += 1
 
         # EXIT LOGIC: Strict numerical comparison
-        elif current_sentiment < self.aggressive_sentiment_exit:
+        elif current_sentiment < exit_threshold:
             if self.position and self.position.is_long:
                 self.position.close()
 
@@ -214,22 +329,29 @@ class AdaptiveStrategy(Strategy):
         ===============================
         Logic: Market is trending down, protect capital or profit from decline.
 
-        Short Entry: AI_Stock_Sentiment < threshold (-0.8)
-        Cover:       AI_Stock_Sentiment > cover_threshold (0.3)
-        Size:        Conservative (50% of equity)
+        Short Entry: AI_Stock_Sentiment < dynamic_short_threshold
+        Cover:       AI_Stock_Sentiment > dynamic_cover_threshold
+        Size:        Conservative (adjusted for volatility)
 
         This is a "preserve capital" approach with selective shorting.
         """
-        current_sentiment = self.sentiment[-1]
+        # Access sentiment directly through self.data for properly sliced array
+        current_sentiment = self.data.AI_Stock_Sentiment[-1]
+
+        # Get dynamic thresholds
+        short_threshold = self.dynamic_thresholds['defensive_short']
+        cover_threshold = self.dynamic_thresholds['defensive_cover']
+        pos_multiplier = self.dynamic_thresholds['position_multiplier']
 
         # SHORT ENTRY LOGIC: Strict numerical comparison
-        if current_sentiment < self.defensive_sentiment_short:
+        if current_sentiment < short_threshold:
             if not self.position:
-                self.sell(size=self.defensive_size)
+                size = self.defensive_size * pos_multiplier
+                self.sell(size=size)
                 self.regime_trades['BEARISH'] += 1
 
         # COVER LOGIC: Strict numerical comparison
-        elif current_sentiment > self.defensive_sentiment_cover:
+        elif current_sentiment > cover_threshold:
             if self.position and self.position.is_short:
                 self.position.close()
 
@@ -243,20 +365,25 @@ class AdaptiveStrategy(Strategy):
         Sell Entry: Price near resistance (within threshold)
         Exit Long:  Price reaches mid-range or resistance
         Exit Short: Price reaches mid-range or support
-        Size:       Moderate (60% of equity)
+        Size:       Dynamic based on volatility
 
         This is a "oscillation" approach for ranging markets.
+        Position size is reduced for high volatility to manage risk.
         """
         current_price = self.data.Close[-1]
         current_support = self.support[-1]
         current_resistance = self.resistance[-1]
+
+        # Get dynamic position multiplier based on volatility
+        pos_multiplier = self.dynamic_thresholds['position_multiplier']
+        dynamic_size = self.mr_size * pos_multiplier
 
         # BUY ENTRY: Price near support
         if current_price <= current_support * 1.01:  # Within 1% of support
             if not self.position or self.position.is_short:
                 if self.position:
                     self.position.close()  # Cover any existing short
-                self.buy(size=self.mr_size)
+                self.buy(size=dynamic_size)
                 self.regime_trades['SIDEWAYS'] += 1
 
         # SELL ENTRY: Price near resistance
@@ -264,7 +391,7 @@ class AdaptiveStrategy(Strategy):
             if not self.position or self.position.is_long:
                 if self.position:
                     self.position.close()  # Exit any existing long
-                self.sell(size=self.mr_size)
+                self.sell(size=dynamic_size)
                 self.regime_trades['SIDEWAYS'] += 1
 
         # EXIT LONG: Price back to middle of range

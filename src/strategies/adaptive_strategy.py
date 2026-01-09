@@ -310,7 +310,8 @@ class BuyAndHoldStrategy(Strategy):
 
     def next(self):
         if not self.bought:
-            self.buy(size=1.0)  # Invest 100% at start
+            # Buy with 95% of equity (close to full position)
+            self.buy(size=0.95)
             self.bought = True
 
 

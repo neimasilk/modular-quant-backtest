@@ -313,6 +313,7 @@ class BacktestEngine:
             cash=self.initial_cash,
             commission=self.commission,
             exclusive_orders=self.exclusive_orders,
+            finalize_trades=True,  # Close open positions at end of backtest
             **strategy_params
         )
 

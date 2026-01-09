@@ -527,7 +527,11 @@ def run_pipeline(
     final_data = final_data[cols]
 
     # Step 5: Save to CSV
-    output_path = Config.OUTPUT_DIR / Config.OUTPUT_FILENAME
+    # Create dynamic filename based on ticker and year
+    ticker_clean = ticker.replace('^', '').replace('.', '_')
+    year = start_date[:4]
+    filename = f"{ticker_clean}_real_data_{year}.csv"
+    output_path = Config.OUTPUT_DIR / filename
     save_to_csv(final_data, output_path)
 
     # Step 6: Upload to Google Drive

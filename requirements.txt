@@ -1,0 +1,20 @@
+# Core Requirements for Modular Quantitative Backtesting Framework
+
+# Backtesting library
+backtesting>=0.3.3
+
+# Data manipulation
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Plotting (required by backtesting library)
+matplotlib>=3.7.0
+plotly>=5.14.0
+
+# Optional: For advanced analytics
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Jupyter for notebooks (optional)
+# jupyter>=1.0.0
+# ipywidgets>=8.0.0

@@ -9,8 +9,8 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 0 |
-| Successful | 0 |
+| Total Experiments | 1 |
+| Successful | 1 |
 | Failed | 0 |
 | Partial | 0 |
 | Active | 0 |
@@ -19,7 +19,14 @@
 
 ## All Experiments
 
-*No experiments yet. Start by creating a new experiment from the template!*
+## EXP-2025-001: Fix Look-Ahead Bias in Sentiment Generation
+
+- **Date:** 2025-01-11
+- **Hypothesis:** Fixing look-ahead bias by using lagged sentiment will provide realistic baseline performance
+- **Result:** Sharpe 2.03 (shifted) vs 1.88 (biased), Return 17.15% vs 16.15%
+- **Outcome:** Success
+- **Key Learning:** Look-ahead bias confirmed (0.78 correlation); fix improved performance
+- **Link:** [./active/EXP-2025-001-fix-look-ahead-bias/](./active/EXP-2025-001-fix-look-ahead-bias/)
 
 ---
 
@@ -42,21 +49,27 @@
 
 ### Momentum Strategies
 *Experiments focused on trend-following and momentum signals*
+- None yet
 
 ### Mean Reversion Strategies
 *Experiments focused on counter-trend and mean reversion signals*
+- EXP-2025-001: Mean reversion tested in sideways regime
 
 ### Regime-Based Strategies
 *Experiments using market regime detection (VIX, volatility, etc.)*
+- EXP-2025-001: VIX-based regime classification with AI signals
 
 ### Hybrid Strategies
 *Experiments combining multiple approaches*
+- None yet
 
 ### Risk Management Tests
 *Experiments focused on stop-loss, position sizing, etc.*
+- None yet
 
 ### Data Pipeline Tests
 *Experiments testing data sources, bias detection, etc.*
+- EXP-2025-001: Look-ahead bias detection and fix
 
 ---
 
@@ -64,11 +77,11 @@
 
 | Tag | Description | Experiments |
 |-----|-------------|-------------|
-| `nvda` | NVIDIA-specific tests | |
-| `spy` | S&P 500 tests | |
-| `vix` | VIX-based strategies | |
-| `sentiment` | News sentiment strategies | |
-| `look-ahead-fix` | Bias fixing experiments | |
+| `nvda` | NVIDIA-specific tests | (actually S&P 500 data) |
+| `spy` | S&P 500 tests | EXP-2025-001 |
+| `vix` | VIX-based strategies | EXP-2025-001 |
+| `sentiment` | Sentiment-based strategies | EXP-2025-001 |
+| `look-ahead-fix` | Bias fixing experiments | EXP-2025-001 |
 | `stop-loss` | Risk management tests | |
 | `walk-forward` | Walk-forward optimization | |
 
@@ -77,16 +90,10 @@
 ## Quick Reference
 
 ### Best Performing Experiments
-1.
-2.
-3.
+1. EXP-2025-001: Sharpe 2.03, Return 17.15% (shifted sentiment)
 
 ### Most Informative Failures
-1.
-2.
-3.
+None yet - keep experimenting!
 
 ### Experiments to Revisit
-1.
-2.
-3.
+- EXP-2025-001: Need to test with real news sentiment

@@ -160,7 +160,35 @@
 |--------|----------|------------|
 | Regime-based approach has merit | Strategy worked in all regimes | Add more entry signals |
 | VIX is useful for regime detection | Good regime classification | Add more indicators |
-| | | |
+| **Defensive strategy wins in bear markets** | **2022: +13% vs -31% for B&H** | Consider more aggressive bull mode |
+
+---
+
+## Bear Market Findings (EXP-2025-004)
+
+### 2022 Bear Market Performance
+
+| Ticker | Adaptive Return | B&H Return | Outperformance |
+|--------|-----------------|------------|---------------|
+| NVDA | +18.68% | -47.94% | **+66.62%** |
+| AAPL | +3.87% | -26.35% | **+30.22%** |
+| SPY | +16.84% | -18.12% | **+34.96%** |
+
+### Key Lessons from Bear Market Test
+
+1. **Defensive mode works**: High VIX triggered appropriate caution
+2. **Stop-loss validated**: Prevented catastrophic 50%+ NVDA losses
+3. **Mean reversion profits**: Volatile swings = opportunities
+4. **Drawdown protection**: 9.70% vs 36.28% average drawdown
+
+### Strategy Character Confirmed
+
+| Market Type | Strategy Behavior | Result |
+|-------------|-------------------|--------|
+| Bull Market | Conservative, early exits | Lower return, lower risk |
+| Bear Market | Defensive, mean reversion | **Profitable**, protects capital |
+
+**This is a defensive/conservative strategy, not a momentum chaser.**
 
 ---
 

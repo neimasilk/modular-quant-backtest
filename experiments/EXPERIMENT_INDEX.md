@@ -9,12 +9,12 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 3 |
-| Successful | 3 |
+| Total Experiments | 4 |
+| Successful | 4 |
 | Failed | 0 |
 | Partial | 0 |
 | Active | 2 |
-| Completed | 1 |
+| Completed | 2 |
 
 ---
 
@@ -46,6 +46,15 @@
 - **Outcome:** Success
 - **Key Learning:** Lowered thresholds improved trade frequency and Sharpe ratio
 - **Link:** [./active/EXP-2025-003-multi-ticker-test/](./active/EXP-2025-003-multi-ticker-test/)
+
+## EXP-2025-004: Bear Market 2022 Test
+
+- **Date:** 2025-01-11
+- **Hypothesis:** Adaptive strategy will outperform Buy&Hold in bear market by protecting capital
+- **Result:** Avg +13.13% vs -30.80% for B&H (+43.93% outperformance!)
+- **Outcome:** Success
+- **Key Learning:** Strategy CRUSHES in bear markets - positive returns while market crashes
+- **Link:** [./active/EXP-2025-004-bear-market-2022/](./active/EXP-2025-004-bear-market-2022/)
 
 ---
 

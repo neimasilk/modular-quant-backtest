@@ -112,93 +112,66 @@ def detect_regime(regime_score: float) -> str:
         return 'SIDEWAYS'
 
 
-def calculate_volatility(closes, period: int = 20) -> float:
+def calculate_volatility(closes, period: int = 20):
     """
-    Calculate annualized volatility from close prices.
-
+    Calculate rolling annualized volatility from close prices.
+    
     Args:
-        closes: Close price series (backtesting _Array)
-        period: Lookback period for volatility calculation
-
+        closes: Close price series (pandas Series)
+        period: Lookback period
+        
     Returns:
-        Annualized volatility as percentage (e.g., 0.30 for 30%)
+        Rolling volatility series (numpy array)
     """
-    # Convert to list if needed
-    if len(closes) < period + 1:
-        return 0.2  # Default volatility
-
-    # Calculate returns for last 'period' bars
-    returns = []
-    for i in range(max(0, len(closes) - period), len(closes)):
-        if i > 0:
-            ret = (closes[i] - closes[i-1]) / closes[i-1]
-            returns.append(ret)
-
-    if len(returns) == 0:
-        return 0.2
-
-    # Calculate standard deviation
+    # Import pandas here for the helper function
+    import pandas as pd
     import numpy as np
-    vol_std = np.std(returns)
 
-    # Annualize (252 trading days)
-    vol_annual = vol_std * np.sqrt(252)
-
-    return float(vol_annual)
-
-
-def get_dynamic_thresholds(volatility: float):
-    """
-    Calculate dynamic entry/exit thresholds based on volatility.
-
-    Logic:
-    - Low volatility (< 20%): Standard thresholds (more selective)
-    - Medium volatility (20-50%): Relaxed thresholds
-    - High volatility (50-80%): Very relaxed thresholds
-    - Extreme volatility (> 80%): Aggressive thresholds (for volatile stocks)
-
-    Args:
-        volatility: Annualized volatility (e.g., 0.30 for 30%)
-
-    Returns:
-        Dictionary with dynamic thresholds
-    """
-    if volatility < 0.20:
-        # Low volatility - Standard thresholds
-        return {
-            'aggressive_entry': 0.2,
-            'aggressive_exit': -0.3,
-            'defensive_short': -0.8,
-            'defensive_cover': 0.3,
-            'position_multiplier': 1.0
-        }
-    elif volatility < 0.50:
-        # Medium volatility - Relaxed thresholds
-        return {
-            'aggressive_entry': 0.1,
-            'aggressive_exit': -0.2,
-            'defensive_short': -0.6,
-            'defensive_cover': 0.2,
-            'position_multiplier': 0.9
-        }
-    elif volatility < 0.80:
-        # High volatility - Very relaxed thresholds
-        return {
-            'aggressive_entry': 0.0,
-            'aggressive_exit': -0.1,
-            'defensive_short': -0.4,
-            'defensive_cover': 0.1,
-            'position_multiplier': 0.7
-        }
+    # Convert to pandas Series if needed
+    if not hasattr(closes, 'rolling'):
+        series = pd.Series(closes)
     else:
-        # Extreme volatility - Aggressive thresholds for small caps
-        return {
-            'aggressive_entry': -0.1,  # Allow buy even with slightly negative sentiment
-            'aggressive_exit': -0.3,
-            'defensive_short': -0.3,
-            'defensive_cover': 0.1,
-            'position_multiplier': 0.5  # Smaller position size for extreme vol
-        }
+        series = closes
+
+    # Calculate log returns
+    returns = np.log(series / series.shift(1))
+    
+    # Calculate rolling standard deviation
+    rolling_std = returns.rolling(window=period, min_periods=period).std()
+    
+    # Annualize
+    vol_annual = rolling_std * np.sqrt(252)
+    
+    # Fill NaN with default volatility (0.2)
+    vol_annual = vol_annual.fillna(0.2)
+    
+    return vol_annual.values
+
+def calculate_support_resistance(series, period: int = 20):
+    """
+    Calculate rolling support and resistance levels.
+    """
+    # Import pandas here for the helper function
+    import pandas as pd
+    
+    # Convert to pandas Series if needed
+    if not hasattr(series, 'rolling'):
+        series_array = pd.Series(series)
+    else:
+        series_array = series
+        
+    rolling_min = series_array.rolling(window=period, min_periods=period).min()
+    rolling_max = series_array.rolling(window=period, min_periods=period).max()
+    
+    # Fill NaN with first available value
+    rolling_min = rolling_min.bfill().fillna(series_array.iloc[0] * 0.95)
+    rolling_max = rolling_max.bfill().fillna(series_array.iloc[0] * 1.05)
+    
+    # Add slight buffer
+    support = rolling_min * (1 + MeanReversionMode.SUPPORT_THRESHOLD)
+    resistance = rolling_max * (1 - MeanReversionMode.RESISTANCE_THRESHOLD)
+    
+    return support.values, resistance.values
 
 
 # ============================================================================
@@ -249,42 +222,64 @@ class AdaptiveStrategy(Strategy):
         Initialize strategy indicators.
         This is called once before backtest starts.
         """
-        # NOTE: We don't store AI signal arrays here.
-        # The backtesting library slices arrays based on current bar index.
-        # We access them directly through self.data in each method to get
-        # the properly sliced version for the current bar.
-
-        # Calculate market volatility
-        self.volatility = calculate_volatility(self.data.Close)
-
-        # Get dynamic thresholds based on volatility
-        if self.use_dynamic_thresholds:
-            self.dynamic_thresholds = get_dynamic_thresholds(self.volatility)
-        else:
-            # Use fixed thresholds (original behavior)
-            self.dynamic_thresholds = {
-                'aggressive_entry': AggressiveMode.SENTIMENT_ENTRY,
-                'aggressive_exit': AggressiveMode.SENTIMENT_EXIT,
-                'defensive_short': DefensiveMode.SENTIMENT_SHORT,
-                'defensive_cover': DefensiveMode.SENTIMENT_COVER,
-                'position_multiplier': 1.0
-            }
+        # Calculate market volatility (Vectorized)
+        # self.I wraps the function to make it accessible as a self.I object (array-like)
+        self.volatility = self.I(calculate_volatility, self.data.Close)
 
         # Calculate support/resistance for mean reversion mode
-        self.support, self.resistance = calculate_support_resistance(
+        self.support, self.resistance = self.I(
+            calculate_support_resistance,
             self.data.Close,
             self.mr_lookback
         )
 
         # Track current regime for logging
         self.current_regime = 'SIDEWAYS'
-
+        
         # Track trade count by regime
         self.regime_trades = {
             'BULLISH': 0,
             'BEARISH': 0,
             'SIDEWAYS': 0
         }
+
+    def get_dynamic_thresholds_for_current_bar(self):
+        """Get thresholds based on current bar's volatility."""
+        current_vol = self.volatility[-1]
+        
+        if current_vol < 0.20:
+            return {
+                'aggressive_entry': 0.2,
+                'aggressive_exit': -0.3,
+                'defensive_short': -0.8,
+                'defensive_cover': 0.3,
+                'position_multiplier': 1.0
+            }
+        elif current_vol < 0.50:
+            return {
+                'aggressive_entry': 0.1,
+                'aggressive_exit': -0.2,
+                'defensive_short': -0.6,
+                'defensive_cover': 0.2,
+                'position_multiplier': 0.9
+            }
+        elif current_vol < 0.80:
+            return {
+                'aggressive_entry': 0.0,
+                'aggressive_exit': -0.1,
+                'defensive_short': -0.4,
+                'defensive_cover': 0.1,
+                'position_multiplier': 0.7
+            }
+        else:
+            return {
+                'aggressive_entry': -0.1,
+                'aggressive_exit': -0.3,
+                'defensive_short': -0.3,
+                'defensive_cover': 0.1,
+                'position_multiplier': 0.5
+            }
+
 
     def get_regime(self) -> str:
         """
@@ -302,10 +297,20 @@ class AdaptiveStrategy(Strategy):
         Execute Aggressive (Bullish) strategy.
         Focus: Buy dips, hold for trend.
         """
+        # Get dynamic thresholds
+        if self.use_dynamic_thresholds:
+            thresholds = self.get_dynamic_thresholds_for_current_bar()
+        else:
+            thresholds = {
+                'aggressive_entry': self.aggr_entry_thresh,
+                'aggressive_exit': self.aggr_exit_thresh,
+                'position_multiplier': 1.0
+            }
+
         # Use optimizable thresholds
-        entry_threshold = self.dynamic_thresholds.get('aggressive_entry', self.aggr_entry_thresh)
-        exit_threshold = self.dynamic_thresholds.get('aggressive_exit', self.aggr_exit_thresh)
-        pos_multiplier = self.dynamic_thresholds.get('position_multiplier', 1.0)
+        entry_threshold = thresholds.get('aggressive_entry', self.aggr_entry_thresh)
+        exit_threshold = thresholds.get('aggressive_exit', self.aggr_exit_thresh)
+        pos_multiplier = thresholds.get('position_multiplier', 1.0)
 
         # Get current sentiment
         # We need to handle both pandas Series and numpy array
@@ -334,10 +339,20 @@ class AdaptiveStrategy(Strategy):
         Execute Defensive (Bearish) strategy.
         Focus: Short rallies, cash preservation.
         """
+        # Get dynamic thresholds
+        if self.use_dynamic_thresholds:
+            thresholds = self.get_dynamic_thresholds_for_current_bar()
+        else:
+            thresholds = {
+                'defensive_short': self.def_short_thresh,
+                'defensive_cover': self.def_cover_thresh,
+                'position_multiplier': 1.0
+            }
+
         # Use optimizable thresholds
-        short_threshold = self.dynamic_thresholds.get('defensive_short', self.def_short_thresh)
-        cover_threshold = self.dynamic_thresholds.get('defensive_cover', self.def_cover_thresh)
-        pos_multiplier = self.dynamic_thresholds.get('position_multiplier', 1.0)
+        short_threshold = thresholds.get('defensive_short', self.def_short_thresh)
+        cover_threshold = thresholds.get('defensive_cover', self.def_cover_thresh)
+        pos_multiplier = thresholds.get('position_multiplier', 1.0)
 
         # Get current sentiment
         if hasattr(self.data, 'AI_Stock_Sentiment'):
@@ -382,7 +397,19 @@ class AdaptiveStrategy(Strategy):
                     self.position.close()  # Cover any existing short
                 
                 sl_price = current_price * (1 - self.stop_loss_pct)
-                self.buy(size=dynamic_size, sl=sl_price, tp=mid_point)
+                
+                # Ensure TP is valid (must be higher than entry price)
+                # If mid_point is too close or below current price (narrow channel), use resistance
+                if mid_point <= current_price * 1.005: # Require at least 0.5% potential profit
+                    target_price = current_resistance
+                else:
+                    target_price = mid_point
+                    
+                # Double check if even resistance is too close (very flat market)
+                if target_price <= current_price * 1.005:
+                    target_price = current_price * 1.05 # Default 5% target if channel collapsed
+                
+                self.buy(size=dynamic_size, sl=sl_price, tp=target_price)
                 self.regime_trades['SIDEWAYS'] += 1
 
         # SELL ENTRY: Price near resistance
@@ -392,7 +419,17 @@ class AdaptiveStrategy(Strategy):
                     self.position.close()  # Exit any existing long
                 
                 sl_price = current_price * (1 + self.stop_loss_pct)
-                self.sell(size=dynamic_size, sl=sl_price, tp=mid_point)
+                
+                # Ensure TP is valid (must be lower than entry price)
+                if mid_point >= current_price * 0.995:
+                    target_price = current_support
+                else:
+                    target_price = mid_point
+                    
+                if target_price >= current_price * 0.995:
+                    target_price = current_price * 0.95
+                
+                self.sell(size=dynamic_size, sl=sl_price, tp=target_price)
                 self.regime_trades['SIDEWAYS'] += 1
 
     def next(self):

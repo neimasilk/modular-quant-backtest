@@ -386,6 +386,13 @@ def forward_fill_daily(
     # Forward fill untuk mengisi NaN
     daily_df_merged['AI_Regime_Score'] = daily_df_merged['AI_Regime_Score'].ffill()
 
+    # CRITICAL FIX: Shift by 1 day to avoid look-ahead bias
+    # The regime score is determined from PAST week data.
+    # When we forward fill, we might apply Monday's score to Monday itself.
+    # But Monday's score is based on Monday's close (which we don't know yet at Monday Open).
+    # So we must shift by 1 day to ensure we trade Tuesday using Monday's score.
+    daily_df_merged['AI_Regime_Score'] = daily_df_merged['AI_Regime_Score'].shift(1)
+
     # Backward fill untuk baris pertama yang mungkin NaN
     daily_df_merged['AI_Regime_Score'] = daily_df_merged['AI_Regime_Score'].bfill()
 

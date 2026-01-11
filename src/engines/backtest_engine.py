@@ -34,6 +34,15 @@ from src.strategies.adaptive_strategy import (
 )
 
 
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 # ============================================================================
 # METRICS CALCULATION
 # ============================================================================
@@ -148,10 +157,7 @@ def calculate_calmar_ratio(total_return: float, max_dd: float) -> float:
 
 def calculate_win_rate(trades: pd.DataFrame) -> tuple[float, float, float]:
     """
-    Calculate win rate and average win/loss ratios.
-
-    Exit Type 1: Take profit (winning trade)
-    Exit Type 0: Stop loss (losing trade)
+    Calculate win rate and average win/loss ratios using vectorized operations.
 
     Args:
         trades: DataFrame of trades from backtest
@@ -162,19 +168,19 @@ def calculate_win_rate(trades: pd.DataFrame) -> tuple[float, float, float]:
     if len(trades) == 0:
         return 0.0, 0.0, 0.0
 
-    # Calculate PnL for each trade
-    pnls = []
-
-    for _, trade in trades.iterrows():
-        # PnL percentage based on entry and exit price
-        if trade['Size'] > 0:  # Long trade
-            pnl_pct = (trade['ExitPrice'] - trade['EntryPrice']) / trade['EntryPrice']
-        else:  # Short trade
-            pnl_pct = (trade['EntryPrice'] - trade['ExitPrice']) / trade['EntryPrice']
-
-        pnls.append(pnl_pct)
-
-    pnls = pd.Series(pnls)
+    # ReturnPct is usually available in backtesting.py trades DataFrame
+    if 'ReturnPct' in trades.columns:
+        pnls = trades['ReturnPct']
+    else:
+        # Vectorized calculation if column missing
+        entry_price = trades['EntryPrice']
+        exit_price = trades['ExitPrice']
+        is_long = trades['Size'] > 0
+        
+        pnls = np.where(is_long, 
+                       (exit_price - entry_price) / entry_price, 
+                       (entry_price - exit_price) / entry_price)
+        pnls = pd.Series(pnls)
 
     winning_trades = pnls[pnls > 0]
     losing_trades = pnls[pnls < 0]
@@ -299,115 +305,73 @@ class BacktestEngine:
         self.metrics = {}
         self.stats = {}
 
-    def run(self, **strategy_params) -> 'BacktestEngine':
+    def run(self, optimize: bool = False):
         """
         Run the backtest.
-
+        
         Args:
-            **strategy_params: Additional strategy parameters
-
-        Returns:
-            Self for method chaining
+            optimize: Whether to run parameter optimization
         """
-        # Initialize backtest
-        self.backtest = Backtest(
-            self.data,
-            self.strategy_class,
-            cash=self.initial_cash,
-            commission=self.commission,
-            exclusive_orders=self.exclusive_orders,
-            finalize_trades=True,  # Close open positions at end of backtest
-            **strategy_params
-        )
-
-        # Run backtest
-        self.results = self.backtest.run()
-
-        # Calculate metrics
-        self._calculate_metrics()
-
-        return self
-
-    def _calculate_metrics(self):
-        """Calculate all performance metrics."""
-        if self.results is None:
-            return
-
-        # Access results from backtesting library (returns a Series-like object)
-        # Equity curve is in _equity_curve DataFrame
-        equity_curve = self.results['_equity_curve']
-        equity_values = equity_curve['Equity'].values
-
-        # Get stats directly from results
-        total_return = self.results.get('Return [%]', 0.0)
-        annual_return = self.results.get('Return (Ann.) [%]', 0.0)
-        volatility = self.results.get('Volatility (Ann.) [%]', 0.0)
-        sharpe = self.results.get('Sharpe Ratio', 0.0)
-        sortino = self.results.get('Sortino Ratio', 0.0)
-        calmar = self.results.get('Calmar Ratio', 0.0)
-        max_dd = self.results.get('Max. Drawdown [%]', 0.0)
-
-        # Drawdown duration
-        dd_duration = self.results.get('Max. Drawdown Duration', 0)
-        if isinstance(dd_duration, pd.Timedelta):
-            dd_duration = dd_duration.days
-
-        # Trade metrics
-        trades_df = self.results._trades
-        n_trades = len(trades_df)
-
-        if n_trades > 0:
-            win_rate, avg_win, avg_loss = calculate_win_rate(trades_df)
-
-            # Profit factor
-            gross_profit = trades_df[trades_df['PnL'] > 0]['PnL'].sum() if len(trades_df) > 0 else 0
-            gross_loss = abs(trades_df[trades_df['PnL'] < 0]['PnL'].sum()) if len(trades_df) > 0 else 0
-            profit_factor = gross_profit / gross_loss if gross_loss != 0 else float('inf') if gross_profit > 0 else 0
-        else:
-            win_rate, avg_win, avg_loss = 0.0, 0.0, 0.0
-            profit_factor = 0.0
-
-        # Store metrics
-        self.metrics = {
-            'total_return': total_return,
-            'annual_return': annual_return,
-            'volatility': volatility,
-            'sharpe_ratio': sharpe if not pd.isna(sharpe) else 0.0,
-            'sortino_ratio': sortino if not pd.isna(sortino) else 0.0,
-            'calmar_ratio': calmar if not pd.isna(calmar) else 0.0,
-            'max_drawdown': max_dd,
-            'max_dd_duration': int(dd_duration) if not pd.isna(dd_duration) else 0,
-            'total_trades': n_trades,
-            'win_rate': win_rate,
-            'avg_win': avg_win,
-            'avg_loss': avg_loss,
-            'profit_factor': profit_factor if not np.isinf(profit_factor) else 0.0,
-            'final_equity': equity_values[-1]
-        }
-
-        # Store additional stats
-        self.stats = {
-            'start_date': self.data.index[0],
-            'end_date': self.data.index[-1],
-            'n_days': len(equity_values)
-        }
-
-        # Try to get regime-specific stats from strategy
-        strategy_instance = self.results.get('_strategy')
-        if strategy_instance and hasattr(strategy_instance, 'regime_trades'):
-            self.stats['regime_trades'] = strategy_instance.regime_trades
+        logger.info(f"Running backtest for {self.strategy_class.__name__}...")
+        
+        try:
+            # Initialize Backtest
+            bt = Backtest(
+                self.data, 
+                self.strategy_class,
+                cash=self.initial_cash,
+                commission=self.commission,
+                exclusive_orders=True
+            )
+            self.backtest = bt  # Store backtest instance
+            
+            if optimize and self.strategy_class == AdaptiveStrategy:
+                logger.info("Running optimization...")
+                # Optimization logic
+                stats, heatmap = bt.optimize(
+                    aggr_entry_thresh=[0.1, 0.2, 0.3],
+                    aggr_exit_thresh=[-0.2, -0.3, -0.4],
+                    maximize='Sharpe Ratio',
+                    return_heatmap=True
+                )
+                self.stats = stats
+                logger.info(f"Optimization complete. Best Sharpe: {stats['Sharpe Ratio']:.2f}")
+            else:
+                self.stats = bt.run()
+                
+            logger.info("Backtest complete.")
+            
+        except Exception as e:
+            logger.error(f"Backtest failed: {e}")
+            raise
 
     def print_report(self):
-        """Print formatted performance report."""
-        print_header("BACKTEST REPORT")
-
-        print(f"\nPeriod: {self.stats['start_date'].strftime('%Y-%m-%d')} to {self.stats['end_date'].strftime('%Y-%m-%d')}")
-        print(f"Duration: {self.stats['n_days']} trading days ({self.stats['n_days']/252:.1f} years)")
-        print(f"Initial Capital: ${self.initial_cash:,.2f}")
-        print(f"Final Equity:     ${self.metrics['final_equity']:,.2f}")
-
-        print_metrics_table(self.metrics)
-        print_regime_analysis(self.stats)
+        """Print performance report."""
+        if self.stats is None:
+            logger.warning("No results to print. Run backtest first.")
+            return
+            
+        # Extract metrics
+        equity_curve = self.stats['_equity_curve']['Equity']
+        trades = self.stats['_trades']
+        
+        # Calculate custom metrics (vectorized)
+        sharpe = calculate_sharpe_ratio(equity_curve)
+        sortino = calculate_sortino_ratio(equity_curve)
+        max_dd, _ = calculate_max_drawdown(equity_curve)
+        win_rate, _, _ = calculate_win_rate(trades)
+        
+        logger.info("=" * 50)
+        logger.info(f"BACKTEST REPORT: {self.strategy_class.__name__}")
+        logger.info("=" * 50)
+        logger.info(f"Return:         {self.stats['Return [%]']:.2f}%")
+        logger.info(f"Buy & Hold:     {self.stats['Buy & Hold Return [%]']:.2f}%")
+        logger.info(f"Sharpe Ratio:   {sharpe:.2f}")
+        logger.info(f"Sortino Ratio:  {sortino:.2f}")
+        logger.info(f"Max Drawdown:   {max_dd:.2f}%")
+        logger.info(f"Win Rate:       {win_rate:.2f}%")
+        logger.info(f"Total Trades:   {len(trades)}")
+        logger.info("-" * 50)
 
     def get_metrics(self) -> Dict[str, Any]:
         """Return metrics as dictionary."""
@@ -419,27 +383,28 @@ class BacktestEngine:
 
         Args:
             filename: Path to save plot (optional)
-            show: Whether to display plot
+            show: Whether to display plot (open browser)
         """
         if self.backtest is None:
-            print("No backtest results to plot. Run run() first.")
+            logger.warning("No backtest results to plot. Run run() first.")
             return
 
+        # Map 'show' to 'open_browser' which is used by backtesting.py
         if filename:
-            self.backtest.plot(filename=filename, show=show)
+            self.backtest.plot(filename=filename, open_browser=show)
         else:
-            self.backtest.plot(show=show)
+            self.backtest.plot(open_browser=show)
 
     def save_plot(self, output_dir: str = "output"):
         """Save plot to file."""
         from pathlib import Path
 
-        Path(output_dir).mkdir(exist_ok=True)
+        Path(output_dir).mkdir(exist_ok=True, parents=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{output_dir}/backtest_{timestamp}.html"
 
-        self.backtest.plot(filename=filename, show=False)
-        print(f"\n[OK] Plot saved to: {filename}")
+        self.backtest.plot(filename=filename, open_browser=False)
+        logger.info(f"Plot saved to: {filename}")
 
 
 # ============================================================================

@@ -200,10 +200,10 @@ See `ROADMAP.md` and `EXPERIMENT_WORKFLOW.md` for details.
 ## Next Actions
 
 1. [x] ~~Implement stop-loss mechanism~~ (Done: 20% hard stop)
-2. [ ] Lower entry thresholds to increase trade frequency
-3. [ ] Fetch actual NVDA data (currently using S&P 500)
+2. [x] ~~Lower entry thresholds to increase trade frequency~~ (Done: Dynamic thresholds implemented)
+3. [x] ~~Fetch actual NVDA data~~ (Done: Using NVDA_real_data_2023.csv)
 4. [ ] Evaluate real news sentiment APIs
-5. [ ] Test on multiple tickers (AAPL, SPY, TSLA)
+5. [x] Test on multiple tickers (AAPL tested)
 
 ---
 

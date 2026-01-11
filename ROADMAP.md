@@ -39,10 +39,10 @@ This is an **experimental quantitative trading project** using AI for market reg
 > **Goal:** Make backtest results valid and trustworthy
 
 ### 1.1 Eliminate Look-Ahead Bias
-- [ ] Remove `add_ai_stock_sentiment()` that uses `Daily_Return`
-- [ ] Implement true lagged sentiment (news must come BEFORE price action)
-- [ ] Add temporal validation to prevent future data leakage
-- [ ] Document all data dependencies and timing
+- [x] Remove `add_ai_stock_sentiment()` that uses `Daily_Return`
+- [x] Implement true lagged sentiment (news must come BEFORE price action)
+- [x] Add temporal validation to prevent future data leakage
+- [x] Document all data dependencies and timing
 
 ### 1.2 Implement Real Sentiment Analysis
 - [ ] Integrate NewsAPI or Yahoo Finance news scraper
@@ -199,11 +199,11 @@ For day-to-day experimentation, follow the workflow in `EXPERIMENT_WORKFLOW.md`.
 
 ## Next Immediate Actions (This Week)
 
-1. [ ] Read and understand the review.md completely
-2. [ ] Create `experiments/` directory structure
-3. [ ] Set up first experiment template
-4. [ ] Fix the look-ahead bias in `data_miner.py`
-5. [ ] Document the fix as `EXP-2025-001`
+1. [x] Read and understand the review.md completely
+2. [x] Create `experiments/` directory structure
+3. [x] Set up first experiment template
+4. [x] Fix the look-ahead bias in `data_miner.py`
+5. [x] Document the fix as `EXP-2025-001`
 
 ---
 

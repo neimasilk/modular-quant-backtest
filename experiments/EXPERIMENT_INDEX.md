@@ -9,11 +9,11 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 2 |
-| Successful | 2 |
+| Total Experiments | 3 |
+| Successful | 3 |
 | Failed | 0 |
 | Partial | 0 |
-| Active | 1 |
+| Active | 2 |
 | Completed | 1 |
 
 ---
@@ -36,7 +36,16 @@
 - **Result:** All fixes applied to codebase
 - **Outcome:** Success
 - **Key Learning:** Code now has 20% stop-loss, data validation, and lagged sentiment
-- **Link:** [./active/EXP-2025-002-critical-fixes/](./active/EXP-2025-002-critical-fixes/)
+- **Link:** [./completed/EXP-2025-002-critical-fixes/](./completed/EXP-2025-002-critical-fixes/)
+
+## EXP-2025-003: Multi-Ticker Test with Lowered Thresholds
+
+- **Date:** 2025-01-11
+- **Hypothesis:** Lowering entry thresholds will increase trade frequency while maintaining risk-adjusted returns
+- **Result:** Avg 15.3 trades/ticker, Avg Sharpe 1.82 (vs 1.60 for B&H)
+- **Outcome:** Success
+- **Key Learning:** Lowered thresholds improved trade frequency and Sharpe ratio
+- **Link:** [./active/EXP-2025-003-multi-ticker-test/](./active/EXP-2025-003-multi-ticker-test/)
 
 ---
 

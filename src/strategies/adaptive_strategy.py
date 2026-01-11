@@ -36,23 +36,23 @@ class RegimeThreshold:
 
 class AggressiveMode:
     """Parameters for Aggressive (Bullish) mode."""
-    SENTIMENT_ENTRY = 0.2      # Min sentiment to enter long
-    SENTIMENT_EXIT = -0.3      # Exit if sentiment drops below
+    SENTIMENT_ENTRY = 0.0      # Min sentiment to enter long (lowered from 0.2 for more trades)
+    SENTIMENT_EXIT = -0.5      # Exit if sentiment drops below (widened from -0.3)
     POSITION_SIZE = 0.95       # Aggressive sizing (near full portfolio)
 
 
 class DefensiveMode:
     """Parameters for Defensive (Bearish) mode."""
-    SENTIMENT_SHORT = -0.8     # Max sentiment to enter short
-    SENTIMENT_COVER = 0.3      # Cover if sentiment rises above
+    SENTIMENT_SHORT = -0.3     # Max sentiment to enter short (raised from -0.8 for more trades)
+    SENTIMENT_COVER = 0.0      # Cover if sentiment rises above (lowered from 0.3)
     POSITION_SIZE = 0.5        # Conservative sizing
 
 
 class MeanReversionMode:
     """Parameters for Mean Reversion (Sideways) mode."""
     LOOKBACK_PERIOD = 20       # Period for support/resistance
-    SUPPORT_THRESHOLD = 0.02   # Buy when price within 2% of support
-    RESISTANCE_THRESHOLD = 0.02  # Sell when price within 2% of resistance
+    SUPPORT_THRESHOLD = 0.03   # Buy when price within 3% of support (widened from 2%)
+    RESISTANCE_THRESHOLD = 0.03  # Sell when price within 3% of resistance (widened from 2%)
     POSITION_SIZE = 0.6        # Moderate sizing
 
 

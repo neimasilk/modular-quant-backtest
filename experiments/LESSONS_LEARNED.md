@@ -64,8 +64,9 @@
 ### Entry Rules
 | What We Tried | What Worked | What Didn't |
 |---------------|-------------|-------------|
-| Regime-based thresholds (VIX) | Good for regime classification | Low trade frequency (6/year) |
-| Mean reversion in sideways | Works but needs more trades | Too selective |
+| Tight thresholds (entry > 0.2) | Conservative, good Sharpe | Only 6 trades/year |
+| **Lowered thresholds (entry > 0.0)** | **15 trades avg, better Sharpe** | Lower absolute return vs B&H |
+| Mean reversion in sideways | Works in ranging markets | Less effective in strong trends |
 
 ### Exit Rules
 | What We Tried | What Worked | What Didn't |
@@ -86,7 +87,8 @@
 ### Bull Markets (AI_Regime_Score > 0.5)
 | Strategy | Performance | Notes |
 |----------|-------------|-------|
-| Adaptive Aggressive | 1 trade only | Too selective |
+| Adaptive Aggressive | 1 trade (old), 24 trades (new) | Too selective originally |
+| NVDA 2023 | Sharpe 1.83, Return 94% | Missed 230% B&H due to early exits |
 
 ### Bear Markets (AI_Regime_Score < -0.5)
 | Strategy | Performance | Notes |
@@ -96,7 +98,29 @@
 ### Sideways (-0.5 <= AI_Regime_Score <= 0.5)
 | Strategy | Performance | Notes |
 |----------|-------------|-------|
-| Mean Reversion | 5 trades | Most active mode |
+| Mean Reversion | 5-24 trades depending on ticker | Most active mode |
+
+---
+
+## Multi-Ticker Findings (EXP-2025-003)
+
+### Cross-Ticker Performance (2023)
+
+| Ticker | Sharpe (Adaptive) | Sharpe (B&H) | Winner |
+|--------|-------------------|--------------|--------|
+| NVDA | 1.83 | 1.42 | Adaptive ✓ |
+| AAPL | 2.10 | 1.75 | Adaptive ✓ |
+| SPY | 1.52 | 1.63 | Buy&Hold ✓ |
+
+**Key Insight:** Strategy consistently beats Buy&Hold on risk-adjusted basis (Sharpe) for volatile stocks (NVDA, AAPL), but may underperform on smooth indices (SPY).
+
+### Trade Frequency by Ticker
+
+| Ticker | Trades | Assessment |
+|--------|--------|------------|
+| NVDA | 24 | Good |
+| AAPL | 14 | OK |
+| SPY | 8 | Low - index less volatile |
 
 ---
 

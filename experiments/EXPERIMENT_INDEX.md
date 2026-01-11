@@ -9,11 +9,12 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 1 |
-| Successful | 1 |
+| Total Experiments | 2 |
+| Successful | 2 |
 | Failed | 0 |
 | Partial | 0 |
-| Active | 0 |
+| Active | 1 |
+| Completed | 1 |
 
 ---
 
@@ -26,7 +27,16 @@
 - **Result:** Sharpe 2.03 (shifted) vs 1.88 (biased), Return 17.15% vs 16.15%
 - **Outcome:** Success
 - **Key Learning:** Look-ahead bias confirmed (0.78 correlation); fix improved performance
-- **Link:** [./active/EXP-2025-001-fix-look-ahead-bias/](./active/EXP-2025-001-fix-look-ahead-bias/)
+- **Link:** [./completed/EXP-2025-001-fix-look-ahead-bias/](./completed/EXP-2025-001-fix-look-ahead-bias/)
+
+## EXP-2025-002: Critical Fixes from Review
+
+- **Date:** 2025-01-11
+- **Hypothesis:** Applying critical fixes (stop-loss, validation, bias fix) will make strategy safer
+- **Result:** All fixes applied to codebase
+- **Outcome:** Success
+- **Key Learning:** Code now has 20% stop-loss, data validation, and lagged sentiment
+- **Link:** [./active/EXP-2025-002-critical-fixes/](./active/EXP-2025-002-critical-fixes/)
 
 ---
 

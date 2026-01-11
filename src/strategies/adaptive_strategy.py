@@ -238,6 +238,10 @@ class AdaptiveStrategy(Strategy):
     # Dynamic threshold settings
     use_dynamic_thresholds = True  # Set to False to use fixed thresholds
 
+    # Risk Management - CRITICAL: Hard stop-loss to prevent total loss
+    stop_loss_pct = 0.20  # 20% hard stop-loss (can be overridden)
+    trailing_stop_pct = 0.05  # 5% trailing stop for profit protection
+
     def init(self):
         """
         Initialize strategy indicators.
@@ -279,6 +283,61 @@ class AdaptiveStrategy(Strategy):
             'BEARISH': 0,
             'SIDEWAYS': 0
         }
+
+        # Risk Management tracking
+        self.entry_price = None  # Track entry price for stop-loss
+        self.highest_since_entry = None  # For trailing stop (long positions)
+        self.lowest_since_entry = None  # For trailing stop (short positions)
+
+    def check_stop_loss(self) -> bool:
+        """
+        Check if stop-loss is triggered.
+
+        Returns:
+            True if position should be closed due to stop-loss
+        """
+        if not self.position:
+            # Reset tracking when no position
+            self.entry_price = None
+            self.highest_since_entry = None
+            self.lowest_since_entry = None
+            return False
+
+        current_price = self.data.Close[-1]
+
+        # Initialize tracking when we first have a position
+        if self.entry_price is None:
+            self.entry_price = current_price
+            self.highest_since_entry = current_price
+            self.lowest_since_entry = current_price
+            return False
+
+        # Update highest/lowest for trailing stop
+        if self.position.is_long:
+            self.highest_since_entry = max(self.highest_since_entry, current_price)
+
+            # Check hard stop-loss (20% below entry)
+            stop_loss_price = self.entry_price * (1 - self.stop_loss_pct)
+
+            # Check trailing stop (5% below highest)
+            trailing_stop_price = self.highest_since_entry * (1 - self.trailing_stop_pct)
+
+            if current_price <= stop_loss_price or current_price <= trailing_stop_price:
+                return True
+
+        elif self.position.is_short:
+            self.lowest_since_entry = min(self.lowest_since_entry, current_price)
+
+            # Check hard stop-loss (20% above entry for short)
+            stop_loss_price = self.entry_price * (1 + self.stop_loss_pct)
+
+            # Check trailing stop (5% above lowest for short)
+            trailing_stop_price = self.lowest_since_entry * (1 + self.trailing_stop_pct)
+
+            if current_price >= stop_loss_price or current_price >= trailing_stop_price:
+                return True
+
+        return False
 
     def get_regime(self) -> str:
         """
@@ -410,7 +469,15 @@ class AdaptiveStrategy(Strategy):
         """
         Main strategy logic - called on each candle.
         This is where we decide what to do based on current conditions.
+
+        CRITICAL: Stop-loss check happens FIRST before any other logic.
         """
+        # CRITICAL: Check stop-loss FIRST - emergency exit takes priority
+        if self.check_stop_loss():
+            if self.position:
+                self.position.close()
+            return
+
         # Detect current regime
         regime = self.get_regime()
         self.current_regime = regime

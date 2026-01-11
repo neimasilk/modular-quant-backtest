@@ -35,7 +35,9 @@ AI-driven trading strategy that adapts based on market regime (Bullish/Bearish/S
 ### Current Status
 - [x] Basic backtest framework
 - [x] Regime-based strategy
-- [x] Look-ahead bias fix
+- [x] Look-ahead bias fix (EXP-2025-002)
+- [x] Hard stop-loss mechanism (20%)
+- [x] Data validation
 - [ ] Real news sentiment
 - [ ] Paper trading
 - [ ] Live trading
@@ -146,11 +148,15 @@ AI-driven trading strategy that adapts based on market regime (Bullish/Bearish/S
 
 ## Known Issues & Risks
 
-### Critical Issues
+### Fixed Issues (EXP-2025-002)
+1. [x] **Look-ahead bias** - Fixed with `.shift(1)` on sentiment
+2. [x] **No stop-loss** - Added 20% hard stop + 5% trailing stop
+3. [x] **No data validation** - Added price range validation
+
+### Remaining Issues
 1. **Low Trade Frequency** - Only 6 trades/year, not statistically significant
-2. **No Stop-Loss** - No hard exit for losing positions
-3. **Fake Sentiment** - Current sentiment is heuristic, not from real news
-4. **No Fundamental Analysis** - Purely technical, contrary to original "Value Investing" claim
+2. **Fake Sentiment** - Current sentiment is heuristic, not from real news
+3. **No Fundamental Analysis** - Purely technical (acknowledged in v3.0)
 
 ### Market Risks
 - **Black Swan Events** - Strategy not tested in crash conditions
@@ -193,10 +199,11 @@ See `ROADMAP.md` and `EXPERIMENT_WORKFLOW.md` for details.
 
 ## Next Actions
 
-1. [ ] Implement stop-loss mechanism (15% default)
+1. [x] ~~Implement stop-loss mechanism~~ (Done: 20% hard stop)
 2. [ ] Lower entry thresholds to increase trade frequency
-3. [ ] Test on NVDA, AAPL, SPY, TSLA
+3. [ ] Fetch actual NVDA data (currently using S&P 500)
 4. [ ] Evaluate real news sentiment APIs
+5. [ ] Test on multiple tickers (AAPL, SPY, TSLA)
 
 ---
 

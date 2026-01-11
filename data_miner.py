@@ -64,6 +64,67 @@ class Config:
 
 
 # ============================================================================
+# STEP 0: DATA VALIDATION
+# ============================================================================
+
+# Expected price ranges for common tickers (to detect data mismatches)
+EXPECTED_PRICE_RANGES = {
+    'NVDA': (10, 1500),      # NVIDIA - wide range due to splits
+    '^GSPC': (3000, 6000),   # S&P 500
+    'SPY': (300, 600),       # S&P 500 ETF
+    'AAPL': (10, 200),       # Apple
+    'TSLA': (10, 500),       # Tesla
+    'MARA': (1, 50),         # Marathon Digital (volatile)
+}
+
+
+def validate_data(df: pd.DataFrame, ticker: str) -> bool:
+    """
+    Validate that the data matches expected price ranges for the ticker.
+
+    This catches issues like: file named "nvda" but contains S&P 500 data.
+
+    Args:
+        df: DataFrame with Close column
+        ticker: Ticker symbol to validate against
+
+    Returns:
+        True if validation passes
+
+    Raises:
+        ValueError: If data validation fails
+    """
+    close_min = df['Close'].min()
+    close_max = df['Close'].max()
+
+    # Check if we have expected range for this ticker
+    expected = EXPECTED_PRICE_RANGES.get(ticker.upper())
+
+    if expected:
+        exp_min, exp_max = expected
+        # Allow some margin for error (50%)
+        margin = 0.5
+
+        if close_max < exp_min * (1 - margin) or close_min > exp_max * (1 + margin):
+            raise ValueError(
+                f"\n{'='*70}\n"
+                f"DATA VALIDATION FAILED!\n"
+                f"{'='*70}\n"
+                f"Ticker: {ticker}\n"
+                f"Data Close Range: ${close_min:.2f} - ${close_max:.2f}\n"
+                f"Expected Range: ${exp_min} - ${exp_max}\n"
+                f"\nThis looks like wrong data!\n"
+                f"Example: S&P 500 (~3800) but file says NVDA.\n"
+                f"{'='*70}\n"
+            )
+
+    print(f"  [OK] Data validation passed for {ticker}")
+    print(f"       Close range: ${close_min:.2f} - ${close_max:.2f}")
+
+    return True
+
+
+# ============================================================================
 # STEP 1: EXTRACT - Fetch Market Data
 # ============================================================================
 
@@ -341,8 +402,11 @@ def add_ai_stock_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     """
     Tambahkan kolom AI_Stock_Sentiment (mockup/placeholder).
 
+    CRITICAL FIX: Shift sentiment by 1 day to avoid look-ahead bias.
+    At time T, we only use sentiment from time T-1 for trading decisions.
+
     Di production, ini bisa diisi dengan:
-    - News sentiment analysis
+    - News sentiment analysis (from NewsAPI, etc.)
     - Social media sentiment
     - Analyst ratings
 
@@ -355,9 +419,9 @@ def add_ai_stock_sentiment(df: pd.DataFrame) -> pd.DataFrame:
         df: DataFrame dengan AI_Regime_Score
 
     Returns:
-        DataFrame dengan tambahan AI_Stock_Sentiment
+        DataFrame dengan tambahan AI_Stock_Sentiment (lagged)
     """
-    print(f"\n[Step 4] Adding AI_Stock_Sentiment (heuristic)")
+    print(f"\n[Step 4] Adding AI_Stock_Sentiment (heuristic with lag)")
 
     # Calculate daily returns
     df = df.copy()
@@ -379,10 +443,14 @@ def add_ai_stock_sentiment(df: pd.DataFrame) -> pd.DataFrame:
         -1.0, 1.0
     )
 
+    # CRITICAL FIX: Shift by 1 day to avoid look-ahead bias
+    # At time T, we only use sentiment from T-1
+    df['AI_Stock_Sentiment'] = df['AI_Stock_Sentiment'].shift(1).fillna(0)
+
     # Drop Daily_Return column
     df = df.drop(columns=['Daily_Return'])
 
-    print(f"  [OK] Sentiment added!")
+    print(f"  [OK] Sentiment added (lagged to avoid look-ahead bias)!")
     print(f"  Avg Sentiment: {df['AI_Stock_Sentiment'].mean():.4f}")
 
     return df
@@ -507,6 +575,9 @@ def run_pipeline(
 
     # Step 1: Extract - Fetch market data
     daily_data = fetch_market_data(ticker, Config.VIX_TICKER, start_date, end_date)
+
+    # Step 1.5: Validate data (catch mismatches like NVDA file containing S&P 500 data)
+    validate_data(daily_data, ticker)
 
     # Step 2a: Resample to weekly
     weekly_data = create_weekly_sample(daily_data)

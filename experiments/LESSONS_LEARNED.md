@@ -36,6 +36,11 @@
 **Lesson:** 6 trades in a year is not statistically significant, even if Sharpe > 2.
 **Rule:** Minimum 20-30 trades needed for meaningful statistics. Preferably 100+.
 
+### 6. Always Use Stop-Loss
+**Source:** review.md, EXP-2025-002
+**Lesson:** No stop-loss = risking total account loss. Even "value investors" cut losses.
+**Rule:** 20% hard stop-loss minimum for prototype strategies. 5-10% for more conservative.
+
 ---
 
 ## Data Pipeline Lessons
@@ -109,10 +114,11 @@
 | | | |
 
 ### Bugs Found
-| Bug | Impact | Fix |
-|-----|--------|-----|
-| Look-ahead bias in `add_ai_stock_sentiment()` | Invalid backtest results | Use `.shift(1)` on sentiment |
-| Data file naming confusion | Analysis errors | Validate data contents |
+| Bug | Impact | Fix | Status |
+|-----|--------|-----|--------|
+| Look-ahead bias in `add_ai_stock_sentiment()` | Invalid backtest results | Use `.shift(1)` on sentiment | Fixed in EXP-2025-002 |
+| No stop-loss mechanism | Risk of total loss | Added 20% hard stop + 5% trailing | Fixed in EXP-2025-002 |
+| Data file naming confusion | Analysis errors | Added validate_data() function | Fixed in EXP-2025-002 |
 
 ---
 

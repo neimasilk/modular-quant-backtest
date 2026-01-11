@@ -1,371 +1,184 @@
-# Modular Quantitative Backtesting Framework with AI-Driven Data Mining
+# Modular Quantitative Backtesting Framework
 
-Framework backtesting modular untuk strategi trading berbasis AI Signals. Menggabungkan **ETL Pipeline** (Data Mining dengan DeepSeek API) dan **Backtesting Engine** untuk menguji strategi dengan data pasar nyata.
+> **Status:** Active Development (v1.0)
+> **Last Updated:** 2025-01-11
 
-## Table of Contents
+Framework backtesting modular untuk strategi trading kuantitatif dengan dua family strategi:
 
-- [Overview](#overview)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-  - [1. Data Mining Pipeline](#1-data-mining-pipeline)
-  - [2. Backtesting](#2-backtesting)
-- [Strategy Logic](#strategy-logic)
-- [Results](#results)
-- [Google Drive Sync](#google-drive-sync)
-- [Troubleshooting](#troubleshooting)
+1. **Adaptive Strategy (FROZEN)** - Technical, regime-based, defensive
+2. **Value Investing Strategy (ACTIVE)** - Fundamental, long-term
 
 ---
 
-## Overview
+## Quick Stats
 
-Framework ini menggabungkan tiga komponen utama:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. DATA MINING LAYER                                      │
-│  - Fetch real market data (Yahoo Finance)                   │
-│  - AI Annotation via DeepSeek API (weekly batch)           │
-│  - Forward fill untuk daily data                           │
-├─────────────────────────────────────────────────────────────┤
-│  2. STRATEGY LAYER                                         │
-│  - Adaptive Strategy (3 modes: Bullish/Bearish/Sideways)   │
-│  - Quantifiable rules, NO discretion                        │
-│  - Based on AI_Regime_Score & AI_Stock_Sentiment            │
-├─────────────────────────────────────────────────────────────┤
-│  3. BACKTEST ENGINE                                        │
-│  - Performance metrics (Sharpe, Max DD, Win Rate, etc)      │
-│  - Strategy comparison                                     │
-│  - Visualization & reporting                               │
-└─────────────────────────────────────────────────────────────┘
-```
+| Strategy | Type | Status | Best For |
+|----------|------|--------|----------|
+| Adaptive (FROZEN) | Technical | Production-ready | Bear markets, volatile conditions |
+| Value Investing | Fundamental | Testing | Long-term, 5-10 year horizon |
 
 ---
 
-## Features
+## Strategies
 
-- **Real Market Data**: Fetch dari Yahoo Finance (stocks, indices, crypto)
-- **AI Annotation**: DeepSeek API untuk market regime classification
-- **Modular Architecture**: Layer terpisah, mudah di-extend
-- **Multi-Strategy Comparison**: Bandingkan beberapa strategi sekaligus
-- **Cloud Storage**: Auto-upload ke Google Drive via rclone
-- **Robust Prototype**: Error handling, retries, logging
+### 1. Adaptive Strategy (FROZEN)
+
+**Location:** `src/strategies/adaptive_strategy.py`
+
+**Type:** Technical, regime-based, defensive
+
+**Key Results (2022 Bear Market):**
+- Portfolio: **+13.1%** vs Buy&Hold **-30.8%**
+- **+43.9% outperformance!**
+- Max DD: 9.70% vs 36.28% B&H
+
+**Identity:** Capital preservation strategy
+- Protects in bear markets
+- Underperforms in mega-bull markets (by design)
+- See: `docs/FROZEN_STRATEGY.md`
+
+### 2. Value Investing Strategy (ACTIVE)
+
+**Location:** `src/strategies/value_investing_strategy.py`
+
+**Type:** Fundamental, bottom-up, long-term
+
+**Key Results (2023 Initial Test):**
+- Portfolio: **+2.62%** vs Benchmark **+42.76%**
+- Underperformed in growth market (expected)
+- See: `experiments/active/EXP-2025-007-value-investing/`
 
 ---
 
 ## Project Structure
 
 ```
-modular/
-├── main.py                      # Backtesting entry point (mock data)
-├── data_miner.py               # ETL Pipeline (real data + AI annotation)
-├── requirements.txt             # Python dependencies
-├── .env                        # API keys (NOT in git)
-├── .env.example                # Template untuk .env
-├── .gitignore                  # Exclude sensitive files
+modular-quant-backtest/
+├── main.py                           # Entry point
+├── data_miner.py                     # ETL Pipeline
+├── requirements.txt
+├── .env.example
+│
+├── docs/                             # Documentation
+│   ├── FROZEN_STRATEGY.md            # Adaptive strategy docs
+│   └── VALUE_INVESTING_ROADMAP.md    # Value strategy plan
 │
 ├── src/
 │   ├── data/
-│   │   └── data_generator.py   # Mock data generation
+│   │   ├── data_generator.py
+│   │   └── fundamental_fetcher.py   # NEW: Fundamental data
 │   ├── strategies/
-│   │   └── adaptive_strategy.py # Adaptive, Buy&Hold, Momentum
+│   │   ├── adaptive_strategy.py      # FROZEN: Technical strategy
+│   │   ├── regime_threshold.py
+│   │   ├── aggressive_mode.py
+│   │   ├── defensive_mode.py
+│   │   ├── mean_reversion_mode.py
+│   │   ├── bull_optimized_strategy.py # FAILED: Do not use
+│   │   └── value_investing_strategy.py # NEW: Value strategy
 │   └── engines/
-│       └── backtest_engine.py  # Backtest runner & metrics
+│       └── backtest_engine.py
 │
-├── data/                       # Generated data files
-│   ├── NVDA_real_data_2023.csv
-│   └── GSPC_real_data_2023.csv
+├── experiments/                      # Experiment tracking
+│   ├── EXPERIMENT_INDEX.md
+│   ├── LESSONS_LEARNED.md
+│   ├── completed/
+│   │   ├── EXP-2025-001-fix-look-ahead-bias/
+│   │   └── EXP-2025-002-critical-fixes/
+│   ├── active/
+│   │   ├── EXP-2025-003-multi-ticker-test/
+│   │   ├── EXP-2025-004-bear-market-2022/
+│   │   ├── EXP-2025-005-real-news-sentiment/
+│   │   └── EXP-2025-007-value-investing/
+│   └── archived/
+│       └── failed/
+│           └── EXP-2025-006-bull-market-optimization/
 │
-└── output/                     # Backtest results
-    ├── nvda_2023_equity_curve.csv
-    └── *.html (plots)
+├── data/                             # Generated data files
+└── output/                           # Backtest results
 ```
 
 ---
 
 ## Installation
 
-### Prerequisites
-
-- Python 3.9+
-- pip
-- rclone (untuk Google Drive sync)
-
-### Step 1: Clone Repository
-
 ```bash
 git clone https://github.com/neimasilk/modular-quant-backtest.git
 cd modular-quant-backtest
-```
-
-### Step 2: Install Dependencies
-
-```bash
 pip install -r requirements.txt
 ```
-
-### Step 3: Setup Environment Variables
-
-Copy `.env.example` ke `.env` dan isi API keys:
-
-```bash
-# Windows
-copy .env.example .env
-
-# Linux/Mac
-cp .env.example .env
-```
-
-Edit `.env`:
-
-```env
-# DeepSeek API Configuration
-DEEPSEEK_API_KEY=sk-your-api-key-here
-
-# Rclone Configuration
-RCLONE_REMOTE_NAME=gdrive
-RCLONE_REMOTE_PATH=quant_backtest_data
-```
-
-### Step 4: Setup rclone (Google Drive)
-
-Jika belum ada rclone remote:
-
-```bash
-rclone config create gdrive
-# Select: Google Drive
-# Follow authentication steps
-```
-
----
-
-## Configuration
-
-### API Keys
-
-| Variable | Description | Source |
-|----------|-------------|--------|
-| `DEEPSEEK_API_KEY` | DeepSeek API key untuk AI annotation | https://platform.deepseek.com/api_keys |
-
-### Rclone Settings
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `RCLONE_REMOTE_NAME` | Nama remote rclone | `gdrive` |
-| `RCLONE_REMOTE_PATH` | Path di Google Drive | `quant_backtest_data` |
 
 ---
 
 ## Usage
 
-### 1. Data Mining Pipeline
-
-Generate market data dengan AI annotation:
-
-```bash
-# Default: NVDA 2023
-python data_miner.py
-
-# Custom ticker dan periode
-python data_miner.py --ticker AAPL --start 2022-01-01 --end 2023-01-01
-
-# S&P 500
-python data_miner.py --ticker ^GSPC --start 2023-01-01 --end 2024-01-01
-
-# NASDAQ
-python data_miner.py --ticker ^IXIC --start 2023-01-01 --end 2024-01-01
-
-# Skip upload ke Google Drive
-python data_miner.py --no-upload
-
-# Dry run (fetch data only, no AI API call)
-python data_miner.py --dry-run
-```
-
-**Output**: `{TICKER}_real_data_{YEAR}.csv` di folder `data/`
-
-**Columns**:
-- `Date`, `Open`, `High`, `Low`, `Close`, `Volume` (OHLCV)
-- `VIX` (Volatility Index)
-- `AI_Regime_Score` (-1.0 to 1.0, dari DeepSeek)
-- `AI_Stock_Sentiment` (-1.0 to 1.0, heuristic-based)
-
-### 2. Backtesting
-
-#### With Mock Data (Quick Test)
-
-```bash
-# Run default backtest
-python main.py
-
-# Compare strategies
-python main.py --compare
-
-# Custom parameters
-python main.py --days 500 --no-plot
-```
-
-#### With Real Mined Data
+### Adaptive Strategy (FROZEN)
 
 ```python
-import pandas as pd
-from src.engines.backtest_engine import BacktestEngine
+from backtesting import Backtest
 from src.strategies.adaptive_strategy import AdaptiveStrategy
+import pandas as pd
+import yfinance as yf
 
-# Load mined data
-df = pd.read_csv('data/NVDA_real_data_2023.csv')
-df['Date'] = pd.to_datetime(df['Date'])
-df.set_index('Date', inplace=True)
-
-# Remove VIX column (not needed for backtesting)
-df_backtest = df.drop(columns=['VIX'])
+# Fetch data
+df = yf.download('NVDA', start='2022-01-01', end='2023-01-01')
+df['AI_Regime_Score'] = ...  # Your regime score
+df['AI_Stock_Sentiment'] = ...  # Your sentiment signal
 
 # Run backtest
-engine = BacktestEngine(
-    data=df_backtest,
-    strategy_class=AdaptiveStrategy,
-    initial_cash=100_000,
-    commission=0.001
+bt = Backtest(df, AdaptiveStrategy, cash=100_000, commission=0.001)
+stats = bt.run()
+print(stats)
+```
+
+### Value Investing Strategy
+
+```python
+from src.data.fundamental_fetcher import FundamentalDataFetcher, ValueScreener
+from src.strategies.value_investing_strategy import ValueBacktester
+
+# Define universe
+universe = ['AAPL', 'MSFT', 'GOOGL', 'JPM', 'JNJ', 'BRK-B', ...]
+
+# Run value backtest
+backtester = ValueBacktester(
+    universe=universe,
+    start_date='2020-01-01',
+    end_date='2024-01-01',
+    initial_cash=100_000
 )
-engine.run()
-engine.print_report()
+results = backtester.run()
 ```
 
 ---
 
-## Strategy Logic
+## Experiment Summary
 
-### Adaptive Strategy (AI-Driven)
-
-Strategy mengubah mode berdasarkan `AI_Regime_Score`:
-
-| Regime Score | Mode | Entry Logic | Position Size |
-|--------------|------|-------------|---------------|
-| > 0.5 | **AGGRESSIVE** | Buy if Sentiment > 0.2 | 95% |
-| < -0.5 | **DEFENSIVE** | Short if Sentiment < -0.8 | 50% |
-| -0.5 to 0.5 | **MEAN REVERSION** | Buy support, Sell resistance | 60% |
-
-### Available Strategies
-
-| Strategy | Description | Best For |
-|----------|-------------|----------|
-| `AdaptiveStrategy` | AI-driven, 3 modes | Volatile markets |
-| `BuyAndHoldStrategy` | Simple buy & hold | Strong uptrend |
-| `SimpleMomentumStrategy` | Price momentum | Trending markets |
+| EXP | Title | Result | Status |
+|-----|-------|--------|--------|
+| 001 | Look-Ahead Bias Fix | Sharpe 2.03 vs 1.88 | ✅ Success |
+| 002 | Critical Fixes | Stop-loss, validation | ✅ Success |
+| 003 | Multi-Ticker Test | Avg Sharpe 1.82 | ✅ Success |
+| 004 | Bear Market 2022 | **+44% outperformance** | ✅ Success |
+| 005 | LLM News Sentiment | Underperformed | ⚠️ Partial |
+| 006 | Bull Market Optimization | Made performance worse | ❌ Failed |
+| 007 | Value Investing | Testing | 🔄 Active |
 
 ---
 
-## Results
+## Key Learnings
 
-### NVDA 2023 (Real Data)
-
-| Strategy | Return | Sharpe | Max DD | Trades |
-|----------|--------|-------|--------|--------|
-| Buy & Hold | **+231%** | 1.42 | -18.0% | 1 |
-| Adaptive (AI) | +174% | **1.79** | **-11.6%** | 6 |
-| Momentum | +109% | 1.31 | -14.6% | 10 |
-
-### S&P 500 2023 (Real Data)
-
-| Strategy | Return | Sharpe | Max DD | Trades |
-|----------|--------|-------|--------|--------|
-| Buy & Hold | **+22%** | 1.52 | -9.6% | 1 |
-| Momentum | +16% | **1.54** | -7.6% | 7 |
-| Adaptive (AI) | +12% | 1.39 | **-6.4%** | 2 |
+1. **Adaptive Strategy CRUSHES bear markets** - Proven 44% outperformance
+2. **Trailing stop approach is DEAD** - EXP-006 proved this hurts performance
+3. **LLM sentiment needs real news** - Price-based sentiment is insufficient
+4. **Value investing needs long timeframe** - 2023 test showed expected underperformance
 
 ---
 
-## Google Drive Sync
+## Next Sessions
 
-### Automatic Sync
-
-Data files otomatis di-upload ke Google Drive saat pipeline selesai:
-
-```
-gdrive:quant_backtest_data/
-├── NVDA_real_data_2023.csv
-├── GSPC_real_data_2023.csv
-└── {TICKER}_real_data_{YEAR}.csv
-```
-
-### Manual Sync
-
-```bash
-# Upload .env ke Google Drive (untuk backup)
-rclone copy .env gdrive:quant_backtest_config/
-
-# Download dari komputer lain
-rclone copy gdrive:quant_backtest_config/.env .env
-
-# Sync semua data
-rclone sync data/ gdrive:quant_backtest_data/
-```
-
-### Persistency (Pindah Komputer)
-
-Untuk setup di komputer baru:
-
-```bash
-# 1. Clone repository
-git clone https://github.com/neimasilk/modular-quant-backtest.git
-cd modular-quant-backtest
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Download .env dari Google Drive
-rclone copy gdrive:quant_backtest_config/.env .env
-
-# 4. Install rclone dan setup remote (jika belum)
-# 5. Download data files
-rclone copy gdrive:quant_backtest_data/ data/
-```
-
----
-
-## Troubleshooting
-
-### Issue: "DEEPSEEK_API_KEY not found"
-
-**Solution**: Buat file `.env` dari `.env.example` dan isi API key.
-
-### Issue: rclone not found
-
-**Solution**: Install rclone dari https://rclone.org/downloads/
-
-### Issue: "Some trades remain open at the end"
-
-**Solution**: Sudah di-fix di code (`finalize_trades=True`)
-
-### Issue: UnicodeEncodeError pada Windows
-
-**Solution**: Gunakan terminal UTF-8 atau set environment variable:
-```bash
-set PYTHONIOENCODING=utf-8
-```
-
----
-
-## Command Reference
-
-```bash
-# Data Mining
-python data_miner.py [--ticker TICKER] [--start DATE] [--end DATE] [--no-upload] [--dry-run]
-
-# Backtesting (mock data)
-python main.py [--days N] [--compare] [--optimize] [--no-plot] [--quiet]
-
-# Git
-git add .
-git commit -m "message"
-git push
-
-# Rclone
-rclone copy .env gdrive:quant_backtest_config/
-rclone sync data/ gdrive:quant_backtest_data/
-```
+1. **Value Investing** - Test longer timeframe (2018-2024)
+2. **Value vs Bear Market** - Validate outperformance in downturns
+3. **Paper Trading** - When strategies are validated
 
 ---
 

@@ -1,0 +1,4 @@
+Strategy,Return %,Sharpe,Max DD %,Win Rate %,# Trades
+Buy & Hold,229.45,1.41,-18.01,nan,0
+Heuristic Sentiment,-9.52,-0.40,-26.93,56.00,25
+News Sentiment (LLM),-15.05,-0.67,-29.34,53.85,26

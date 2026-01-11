@@ -13,14 +13,19 @@ experiments/
 ├── templates/             # Experiment templates
 │   └── experiment.md      # Standard experiment template
 │
-├── active/                # Currently running experiments
-│   └── EXP-YYYY-NNN-*/    # Individual experiment folders
+├── active/                # Currently running/partial experiments
+│   ├── EXP-2025-003-multi-ticker-test/
+│   ├── EXP-2025-004-bear-market-2022/
+│   └── EXP-2025-005-real-news-sentiment/
 │
 ├── completed/             # Recently finished experiments
+│   ├── EXP-2025-001-fix-look-ahead-bias/
+│   └── EXP-2025-002-critical-fixes/
 │
 └── archived/              # Old experiments (organized by outcome)
-    ├── successful/        # Strategies that worked
     ├── failed/            # Strategies that didn't work
+    │   └── EXP-2025-006-bull-market-optimization/
+    ├── successful/        # Strategies that worked
     └── partial/           # Partial successes, may revisit
 ```
 

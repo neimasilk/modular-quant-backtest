@@ -192,15 +192,38 @@
 
 ---
 
+## Bull Market Optimization Lessons (EXP-2025-006)
+
+### What We Tried
+- ADX trend strength filter to detect strong trends
+- 5% trailing stop to "let winners run"
+- Skipping mean reversion in strong trends
+
+### What Happened
+- NVDA 2023: -9.52% → -20.46% (WORSE!)
+- Trades: 25 → 10 (60% reduction)
+- Trailing stop caused whipsaw hell
+
+### Key Learning
+**Trailing stops are tricky in volatile markets.** 5% stop triggered too frequently, causing:
+- Exit on pullback
+- Miss continuation
+- Re-entry too late
+
+**This approach is DEAD.** Do not revisit.
+
+---
+
 ## Questions to Answer
 
 ### Open Questions
 - [ ] How to increase trade frequency while maintaining risk-adjusted returns?
-- [ ] Should we implement real news sentiment (NewsAPI, Alpha Vantage)?
+- [x] ~~Should we use trailing stop for bull markets?~~ NO - EXP-006 proved this hurts performance
 - [ ] What's the optimal stop-loss level for this strategy?
 - [ ] Should we add fundamental filters (PE, PBV)?
 
 ### Hypotheses to Test
+- [x] ~~Trailing stop + ADX filter improves bull market~~ FAILED - made performance worse
 - [ ] Real news sentiment will outperform heuristic sentiment
 - [ ] Lowering entry thresholds will increase trade frequency
 - [ ] Adding a 15% stop-loss will improve risk-adjusted returns

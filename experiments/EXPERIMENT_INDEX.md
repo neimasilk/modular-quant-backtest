@@ -9,12 +9,12 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 4 |
+| Total Experiments | 7 |
 | Successful | 4 |
-| Failed | 0 |
-| Partial | 0 |
-| Active | 2 |
-| Completed | 2 |
+| Failed | 1 |
+| Partial | 1 |
+| Active | 4 |
+| Completed | 3 |
 
 ---
 
@@ -55,6 +55,33 @@
 - **Outcome:** Success
 - **Key Learning:** Strategy CRUSHES in bear markets - positive returns while market crashes
 - **Link:** [./active/EXP-2025-004-bear-market-2022/](./active/EXP-2025-004-bear-market-2022/)
+
+## EXP-2025-005: Real News Sentiment Analysis
+
+- **Date:** 2025-01-11
+- **Hypothesis:** LLM-analyzed sentiment will provide uncorrelated signals that improve Sharpe ratio
+- **Result:** LLM -15.05% vs Heuristic -9.52% vs B&H +229%; Correlation 0.152 (uncorrelated)
+- **Outcome:** Partial
+- **Key Learning:** LLM provides uncorrelated signals but underperforms; weekly sampling creates lag
+- **Link:** [./active/EXP-2025-005-real-news-sentiment/](./active/EXP-2025-005-real-news-sentiment/)
+
+## EXP-2025-006: Bull Market Optimization (ADX + Trailing Stop)
+
+- **Date:** 2025-01-11
+- **Hypothesis:** ADX trend filter + 5% trailing stop will improve bull market returns
+- **Result:** Optimized -20.46% vs Original -9.52% (WORSE!); Trades dropped 60%
+- **Outcome:** Failed
+- **Key Learning:** Trailing stop too tight for volatile stocks; skipping mean reversion reduced opportunities
+- **Link:** [./archived/failed/EXP-2025-006-bull-market-optimization/](./archived/failed/EXP-2025-006-bull-market-optimization/)
+
+## EXP-2025-007: Value Investing Strategy
+
+- **Date:** 2025-01-11
+- **Hypothesis:** Fundamental value strategy will generate alpha vs benchmark
+- **Result:** +2.62% vs +42.76% benchmark (2023 - underperformed in growth market)
+- **Outcome:** Active (Testing phase)
+- **Key Learning:** Value underperforms in strong bull markets (expected); needs longer timeframe validation
+- **Link:** [./active/EXP-2025-007-value-investing/](./active/EXP-2025-007-value-investing/)
 
 ---
 
@@ -98,6 +125,7 @@
 ### Data Pipeline Tests
 *Experiments testing data sources, bias detection, etc.*
 - EXP-2025-001: Look-ahead bias detection and fix
+- EXP-2025-005: LLM sentiment integration via DeepSeek API
 
 ---
 
@@ -105,10 +133,11 @@
 
 | Tag | Description | Experiments |
 |-----|-------------|-------------|
-| `nvda` | NVIDIA-specific tests | (actually S&P 500 data) |
+| `nvda` | NVIDIA-specific tests | EXP-2025-005 |
 | `spy` | S&P 500 tests | EXP-2025-001 |
 | `vix` | VIX-based strategies | EXP-2025-001 |
-| `sentiment` | Sentiment-based strategies | EXP-2025-001 |
+| `sentiment` | Sentiment-based strategies | EXP-2025-001, EXP-2025-005 |
+| `llm` | LLM/DeepSeek integration | EXP-2025-005 |
 | `look-ahead-fix` | Bias fixing experiments | EXP-2025-001 |
 | `stop-loss` | Risk management tests | |
 | `walk-forward` | Walk-forward optimization | |
@@ -121,7 +150,8 @@
 1. EXP-2025-001: Sharpe 2.03, Return 17.15% (shifted sentiment)
 
 ### Most Informative Failures
-None yet - keep experimenting!
+- EXP-2025-006: Trailing stop + ADX filter made performance WORSE (important negative result)
 
 ### Experiments to Revisit
-- EXP-2025-001: Need to test with real news sentiment
+- EXP-2025-005: Test LLM sentiment in bear/sideways markets (may perform better)
+- ~~EXP-2025-006~~: DO NOT revisit - approach proven ineffective

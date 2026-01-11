@@ -89,11 +89,13 @@ def run_single_backtest(
     if verbose:
         print("\n[Step 1] Generating Mock Data with AI Signals...")
 
+    # CRITICAL FIX: Removed add_signal_impact=True to prevent self-fulfilling prophecy
+    # We want to test if the signals work on UNMODIFIED price data
     data = prepare_data(
         n_days=n_days,
         start_price=Config.START_PRICE,
         volatility=Config.VOLATILITY,
-        add_signal_impact=True
+        add_signal_impact=False
     )
 
     # Validate data
@@ -245,9 +247,9 @@ def run_optimization(n_days: int = Config.DEFAULT_DAYS):
     # Optimize aggressive mode thresholds
     print("\nRunning optimization (this may take a while)...")
 
-    stats = bt.optimize(
-        aggressive_sentiment_entry=[0.1, 0.2, 0.3],
-        aggressive_sentiment_exit=[-0.2, -0.3, -0.4],
+    stats, heatmap = bt.optimize(
+        aggr_entry_thresh=[0.1, 0.2, 0.3],
+        aggr_exit_thresh=[-0.2, -0.3, -0.4],
         maximize='Sharpe Ratio',
         return_heatmap=True
     )
@@ -257,8 +259,11 @@ def run_optimization(n_days: int = Config.DEFAULT_DAYS):
     print(f"Best Return: {stats['Return [%]']:.2f}%")
 
     print("\nOptimal Parameters:")
-    print(f"  aggressive_sentiment_entry: {stats['_strategy'].aggressive_sentiment_entry}")
-    print(f"  aggressive_sentiment_exit: {stats['_strategy'].aggressive_sentiment_exit}")
+    print(f"  aggr_entry_thresh: {stats['_strategy'].aggr_entry_thresh}")
+    print(f"  aggr_exit_thresh: {stats['_strategy'].aggr_exit_thresh}")
+
+    # Save heatmap
+    heatmap.to_csv(f"{Config.OUTPUT_DIR}/optimization_heatmap.csv")
 
 
 # ============================================================================
@@ -302,36 +307,53 @@ def parse_args():
         help='Minimal output'
     )
 
+    parser.add_argument(
+        '--verbose', '-v',
+        action='store_true',
+        help='Show detailed output and debug info'
+    )
+
     return parser.parse_args()
 
 
 def main():
     """Main entry point."""
-    args = parse_args()
+    try:
+        args = parse_args()
 
-    # Create output directory
-    Path(Config.OUTPUT_DIR).mkdir(exist_ok=True)
+        # Create output directory
+        Path(Config.OUTPUT_DIR).mkdir(exist_ok=True)
 
-    # Route to appropriate mode
-    if args.compare:
-        run_strategy_comparison(
-            n_days=args.days,
-            verbose=not args.quiet
-        )
-    elif args.optimize:
-        run_optimization(n_days=args.days)
-    else:
-        # Default: Run single backtest
-        metrics = run_single_backtest(
-            n_days=args.days,
-            plot=not args.no_plot,
-            verbose=not args.quiet
-        )
+        # Route to appropriate mode
+        if args.compare:
+            run_strategy_comparison(
+                n_days=args.days,
+                verbose=not args.quiet
+            )
+        elif args.optimize:
+            run_optimization(n_days=args.days)
+        else:
+            # Default: Run single backtest
+            metrics = run_single_backtest(
+                n_days=args.days,
+                plot=not args.no_plot,
+                verbose=not args.quiet
+            )
 
-        if not args.quiet:
-            print("\n" + "=" * 70)
-            print("[OK] Backtest Complete!")
-            print("=" * 70)
+            if not args.quiet:
+                print("\n" + "=" * 70)
+                print("[OK] Backtest Complete!")
+                print("=" * 70)
+                
+    except KeyboardInterrupt:
+        print("\n[INFO] Operation cancelled by user.")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n[ERROR] An unexpected error occurred: {str(e)}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

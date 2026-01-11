@@ -35,9 +35,8 @@ env/
 .DS_Store
 Thumbs.db
 
-# Output files (optional, comment out if you want to track plots)
-# output/*.html
-# output/*.png
+# Output files
+output/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -49,6 +48,7 @@ htmlcov/
 
 # Environment variables (API keys, secrets)
 .env
+.env.remote
 
 # Data files (optional, comment out if you want to track data)
 # *.csv

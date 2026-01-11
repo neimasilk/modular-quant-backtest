@@ -49,19 +49,22 @@ def calculate_sharpe_ratio(returns: pd.Series, risk_free_rate: float = 0.02) -> 
     Returns:
         Sharpe Ratio (annualized)
     """
-    if len(returns) == 0 or returns.std() == 0:
+    try:
+        if len(returns) == 0 or returns.std() == 0:
+            return 0.0
+
+        # Daily risk-free rate
+        daily_rf = risk_free_rate / 252
+
+        # Excess returns
+        excess_returns = returns - daily_rf
+
+        # Annualized Sharpe Ratio
+        sharpe = excess_returns.mean() / excess_returns.std() * np.sqrt(252)
+
+        return float(sharpe)
+    except Exception:
         return 0.0
-
-    # Daily risk-free rate
-    daily_rf = risk_free_rate / 252
-
-    # Excess returns
-    excess_returns = returns - daily_rf
-
-    # Annualized Sharpe Ratio
-    sharpe = excess_returns.mean() / excess_returns.std() * np.sqrt(252)
-
-    return float(sharpe)
 
 
 def calculate_sortino_ratio(returns: pd.Series, risk_free_rate: float = 0.02) -> float:

@@ -187,7 +187,7 @@ def prepare_data(
     n_days: int = 252,
     start_price: float = 100.0,
     volatility: float = 0.02,
-    add_signal_impact: bool = True
+    add_signal_impact: bool = False  # Changed default to False for safety
 ) -> pd.DataFrame:
     """
     Main function: Generate complete dataset for backtesting.
@@ -196,7 +196,7 @@ def prepare_data(
         n_days: Number of trading days
         start_price: Initial price
         volatility: Daily volatility
-        add_signal_impact: Whether signals subtly affect prices
+        add_signal_impact: Whether signals subtly affect prices (Default: False)
 
     Returns:
         DataFrame with columns:

@@ -51,7 +51,7 @@ Framework ini menggabungkan tiga komponen utama:
 - **Modular Architecture**: Layer terpisah, mudah di-extend
 - **Multi-Strategy Comparison**: Bandingkan beberapa strategi sekaligus
 - **Cloud Storage**: Auto-upload ke Google Drive via rclone
-- **Production Ready**: Error handling, retries, logging
+- **Robust Prototype**: Error handling, retries, logging
 
 ---
 

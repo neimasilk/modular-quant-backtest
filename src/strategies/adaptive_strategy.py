@@ -222,18 +222,20 @@ class AdaptiveStrategy(Strategy):
     regime_bearish_threshold = RegimeThreshold.BEARISH_MAX
 
     # Aggressive mode parameters
-    aggressive_sentiment_entry = AggressiveMode.SENTIMENT_ENTRY
-    aggressive_sentiment_exit = AggressiveMode.SENTIMENT_EXIT
-    aggressive_size = AggressiveMode.POSITION_SIZE
+    aggr_entry_thresh = AggressiveMode.SENTIMENT_ENTRY
+    aggr_exit_thresh = AggressiveMode.SENTIMENT_EXIT
+    aggr_size = AggressiveMode.POSITION_SIZE
 
     # Defensive mode parameters
-    defensive_sentiment_short = DefensiveMode.SENTIMENT_SHORT
-    defensive_sentiment_cover = DefensiveMode.SENTIMENT_COVER
-    defensive_size = DefensiveMode.POSITION_SIZE
+    def_short_thresh = DefensiveMode.SENTIMENT_SHORT
+    def_cover_thresh = DefensiveMode.SENTIMENT_COVER
+    def_size = DefensiveMode.POSITION_SIZE
 
     # Mean reversion mode parameters
     mr_lookback = MeanReversionMode.LOOKBACK_PERIOD
     mr_size = MeanReversionMode.POSITION_SIZE
+    mr_support_thresh = MeanReversionMode.SUPPORT_THRESHOLD
+    mr_resist_thresh = MeanReversionMode.RESISTANCE_THRESHOLD
 
     # Dynamic threshold settings
     use_dynamic_thresholds = True  # Set to False to use fixed thresholds
@@ -284,70 +286,6 @@ class AdaptiveStrategy(Strategy):
             'SIDEWAYS': 0
         }
 
-        # Risk Management tracking
-        self.entry_price = None  # Track entry price for stop-loss
-        self.highest_since_entry = None  # For trailing stop (long positions)
-        self.lowest_since_entry = None  # For trailing stop (short positions)
-
-    def check_stop_loss(self) -> bool:
-        """
-        Check if stop-loss is triggered.
-
-        Returns:
-            True if position should be closed due to stop-loss
-
-        CRITICAL FIX: Entry price is now set at actual entry point in
-        execute_*_mode() methods, not here. This prevents incorrect
-        entry prices when market gaps after position entry.
-        """
-        if not self.position:
-            # Reset tracking when no position
-            self.entry_price = None
-            self.highest_since_entry = None
-            self.lowest_since_entry = None
-            return False
-
-        # CRITICAL: entry_price should always be set when we have a position
-        # It is set at the actual entry point in execute_*_mode() methods.
-        # If this condition is triggered, there is a bug in the entry logic.
-        if self.entry_price is None:
-            # Fallback: set to current price (but this indicates a bug)
-            import warnings
-            warnings.warn("entry_price is None while position exists! This should not happen.")
-            self.entry_price = self.data.Close[-1]
-            self.highest_since_entry = self.entry_price
-            self.lowest_since_entry = self.entry_price
-            return False
-
-        current_price = self.data.Close[-1]
-
-        # Update highest/lowest for trailing stop
-        if self.position.is_long:
-            self.highest_since_entry = max(self.highest_since_entry, current_price)
-
-            # Check hard stop-loss (20% below entry)
-            stop_loss_price = self.entry_price * (1 - self.stop_loss_pct)
-
-            # Check trailing stop (5% below highest)
-            trailing_stop_price = self.highest_since_entry * (1 - self.trailing_stop_pct)
-
-            if current_price <= stop_loss_price or current_price <= trailing_stop_price:
-                return True
-
-        elif self.position.is_short:
-            self.lowest_since_entry = min(self.lowest_since_entry, current_price)
-
-            # Check hard stop-loss (20% above entry for short)
-            stop_loss_price = self.entry_price * (1 + self.stop_loss_pct)
-
-            # Check trailing stop (5% above lowest for short)
-            trailing_stop_price = self.lowest_since_entry * (1 + self.trailing_stop_pct)
-
-            if current_price >= stop_loss_price or current_price >= trailing_stop_price:
-                return True
-
-        return False
-
     def get_regime(self) -> str:
         """
         Get current regime based on latest AI_Regime_Score.
@@ -361,168 +299,107 @@ class AdaptiveStrategy(Strategy):
 
     def execute_aggressive_mode(self):
         """
-        AGGRESSIVE MODE (Bullish Regime)
-        ===============================
-        Logic: Market is trending up, be aggressive with long positions.
-
-        Entry:  AI_Stock_Sentiment > dynamic_threshold
-        Exit:   AI_Stock_Sentiment < dynamic_exit_threshold
-        Size:   Adjusted based on volatility
-
-        This is a "momentum-within-trend" approach.
+        Execute Aggressive (Bullish) strategy.
+        Focus: Buy dips, hold for trend.
         """
-        # Access sentiment directly through self.data for properly sliced array
-        current_sentiment = self.data.AI_Stock_Sentiment[-1]
+        # Use optimizable thresholds
+        entry_threshold = self.dynamic_thresholds.get('aggressive_entry', self.aggr_entry_thresh)
+        exit_threshold = self.dynamic_thresholds.get('aggressive_exit', self.aggr_exit_thresh)
+        pos_multiplier = self.dynamic_thresholds.get('position_multiplier', 1.0)
 
-        # Get dynamic thresholds
-        entry_threshold = self.dynamic_thresholds['aggressive_entry']
-        exit_threshold = self.dynamic_thresholds['aggressive_exit']
-        pos_multiplier = self.dynamic_thresholds['position_multiplier']
+        # Get current sentiment
+        # We need to handle both pandas Series and numpy array
+        if hasattr(self.data, 'AI_Stock_Sentiment'):
+            current_sentiment = self.data.AI_Stock_Sentiment[-1]
+        else:
+            current_sentiment = 0.0
 
         # ENTRY LOGIC: Strict numerical comparison
         if current_sentiment > entry_threshold:
             if not self.position:
-                size = self.aggressive_size * pos_multiplier
-                self.buy(size=min(size, 0.95))  # Cap at 95%
+                size = self.aggr_size * pos_multiplier
+                current_price = self.data.Close[-1]
+                sl_price = current_price * (1 - self.stop_loss_pct)
+                
+                self.buy(size=min(size, 0.95), sl=sl_price)  # Cap at 95%
                 self.regime_trades['BULLISH'] += 1
-                # CRITICAL FIX: Set entry price at actual entry point
-                self.entry_price = self.data.Close[-1]
-                self.highest_since_entry = self.entry_price
-                self.lowest_since_entry = self.entry_price
 
         # EXIT LOGIC: Strict numerical comparison
         elif current_sentiment < exit_threshold:
             if self.position and self.position.is_long:
                 self.position.close()
-                # Reset tracking when exiting
-                self.entry_price = None
-                self.highest_since_entry = None
-                self.lowest_since_entry = None
 
     def execute_defensive_mode(self):
         """
-        DEFENSIVE MODE (Bearish Regime)
-        ===============================
-        Logic: Market is trending down, protect capital or profit from decline.
-
-        Short Entry: AI_Stock_Sentiment < dynamic_short_threshold
-        Cover:       AI_Stock_Sentiment > dynamic_cover_threshold
-        Size:        Conservative (adjusted for volatility)
-
-        This is a "preserve capital" approach with selective shorting.
+        Execute Defensive (Bearish) strategy.
+        Focus: Short rallies, cash preservation.
         """
-        # Access sentiment directly through self.data for properly sliced array
-        current_sentiment = self.data.AI_Stock_Sentiment[-1]
+        # Use optimizable thresholds
+        short_threshold = self.dynamic_thresholds.get('defensive_short', self.def_short_thresh)
+        cover_threshold = self.dynamic_thresholds.get('defensive_cover', self.def_cover_thresh)
+        pos_multiplier = self.dynamic_thresholds.get('position_multiplier', 1.0)
 
-        # Get dynamic thresholds
-        short_threshold = self.dynamic_thresholds['defensive_short']
-        cover_threshold = self.dynamic_thresholds['defensive_cover']
-        pos_multiplier = self.dynamic_thresholds['position_multiplier']
+        # Get current sentiment
+        if hasattr(self.data, 'AI_Stock_Sentiment'):
+            current_sentiment = self.data.AI_Stock_Sentiment[-1]
+        else:
+            current_sentiment = 0.0
 
         # SHORT ENTRY LOGIC: Strict numerical comparison
         if current_sentiment < short_threshold:
             if not self.position:
-                size = self.defensive_size * pos_multiplier
-                self.sell(size=size)
+                size = self.def_size * pos_multiplier
+                current_price = self.data.Close[-1]
+                sl_price = current_price * (1 + self.stop_loss_pct)
+                
+                self.sell(size=size, sl=sl_price)
                 self.regime_trades['BEARISH'] += 1
-                # CRITICAL FIX: Set entry price at actual entry point
-                self.entry_price = self.data.Close[-1]
-                self.highest_since_entry = self.entry_price
-                self.lowest_since_entry = self.entry_price
 
         # COVER LOGIC: Strict numerical comparison
         elif current_sentiment > cover_threshold:
             if self.position and self.position.is_short:
                 self.position.close()
-                # Reset tracking when exiting
-                self.entry_price = None
-                self.highest_since_entry = None
-                self.lowest_since_entry = None
 
     def execute_mean_reversion_mode(self):
         """
-        MEAN REVERSION MODE (Sideways Regime)
-        ======================================
-        Logic: Market is range-bound, buy low and sell high.
-
-        Buy Entry:  Price near support (within threshold)
-        Sell Entry: Price near resistance (within threshold)
-        Exit Long:  Price reaches mid-range or resistance
-        Exit Short: Price reaches mid-range or support
-        Size:       Dynamic based on volatility
-
-        This is a "oscillation" approach for ranging markets.
-        Position size is reduced for high volatility to manage risk.
+        Execute Mean Reversion (Sideways) strategy.
+        Focus: Buy support, Sell resistance.
         """
-        current_price = self.data.Close[-1]
+        # Get support/resistance levels
+        # When using self.I, these are arrays synced with data
         current_support = self.support[-1]
         current_resistance = self.resistance[-1]
-
-        # Get dynamic position multiplier based on volatility
-        pos_multiplier = self.dynamic_thresholds['position_multiplier']
-        dynamic_size = self.mr_size * pos_multiplier
+        mid_point = (current_support + current_resistance) / 2
+        
+        current_price = self.data.Close[-1]
+        dynamic_size = self.mr_size
 
         # BUY ENTRY: Price near support
-        if current_price <= current_support * 1.01:  # Within 1% of support
+        # Use optimizable threshold
+        if current_price <= current_support * (1 + self.mr_support_thresh):  # Within threshold of support
             if not self.position or self.position.is_short:
                 if self.position:
                     self.position.close()  # Cover any existing short
-                self.buy(size=dynamic_size)
+                
+                sl_price = current_price * (1 - self.stop_loss_pct)
+                self.buy(size=dynamic_size, sl=sl_price, tp=mid_point)
                 self.regime_trades['SIDEWAYS'] += 1
-                # CRITICAL FIX: Set entry price at actual entry point
-                self.entry_price = self.data.Close[-1]
-                self.highest_since_entry = self.entry_price
-                self.lowest_since_entry = self.entry_price
 
         # SELL ENTRY: Price near resistance
-        elif current_price >= current_resistance * 0.99:  # Within 1% of resistance
+        elif current_price >= current_resistance * (1 - self.mr_resist_thresh):  # Within threshold of resistance
             if not self.position or self.position.is_long:
                 if self.position:
                     self.position.close()  # Exit any existing long
-                self.sell(size=dynamic_size)
+                
+                sl_price = current_price * (1 + self.stop_loss_pct)
+                self.sell(size=dynamic_size, sl=sl_price, tp=mid_point)
                 self.regime_trades['SIDEWAYS'] += 1
-                # CRITICAL FIX: Set entry price at actual entry point
-                self.entry_price = self.data.Close[-1]
-                self.highest_since_entry = self.entry_price
-                self.lowest_since_entry = self.entry_price
-
-        # EXIT LONG: Price back to middle of range
-        if self.position and self.position.is_long:
-            mid_point = (current_support + current_resistance) / 2
-            if current_price >= mid_point:
-                self.position.close()
-                # Reset tracking when exiting
-                self.entry_price = None
-                self.highest_since_entry = None
-                self.lowest_since_entry = None
-
-        # EXIT SHORT: Price back to middle of range
-        if self.position and self.position.is_short:
-            mid_point = (current_support + current_resistance) / 2
-            if current_price <= mid_point:
-                self.position.close()
-                # Reset tracking when exiting
-                self.entry_price = None
-                self.highest_since_entry = None
-                self.lowest_since_entry = None
 
     def next(self):
         """
         Main strategy logic - called on each candle.
         This is where we decide what to do based on current conditions.
-
-        CRITICAL: Stop-loss check happens FIRST before any other logic.
         """
-        # CRITICAL: Check stop-loss FIRST - emergency exit takes priority
-        if self.check_stop_loss():
-            if self.position:
-                self.position.close()
-                # Reset tracking after stop-loss exit
-                self.entry_price = None
-                self.highest_since_entry = None
-                self.lowest_since_entry = None
-            return
-
         # Detect current regime
         regime = self.get_regime()
         self.current_regime = regime

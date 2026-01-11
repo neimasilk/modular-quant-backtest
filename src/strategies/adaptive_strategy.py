@@ -73,25 +73,26 @@ def calculate_support_resistance(series, period: int = 20):
     """
     # Import pandas here for the helper function
     import pandas as pd
-
+    
     # Convert to pandas Series if needed
     if not hasattr(series, 'rolling'):
-        # It's a backtesting _Array, convert to list then to Series
-        series_array = pd.Series([series[i] for i in range(len(series))])
+        series_array = pd.Series(series)
     else:
         series_array = series
-
-    rolling_min = series_array.rolling(window=period, min_periods=1).min()
-    rolling_max = series_array.rolling(window=period, min_periods=1).max()
-
+        
+    rolling_min = series_array.rolling(window=period, min_periods=period).min()
+    rolling_max = series_array.rolling(window=period, min_periods=period).max()
+    
+    # Fill NaN with first available value (or slightly adjusted)
+    # Use bfill to ensure we have values at the start if possible, or fillna with initial
+    rolling_min = rolling_min.bfill().fillna(series_array.iloc[0] * 0.95)
+    rolling_max = rolling_max.bfill().fillna(series_array.iloc[0] * 1.05)
+    
     # Add slight buffer (don't buy at exact bottom, don't sell at exact top)
     support = rolling_min * (1 + MeanReversionMode.SUPPORT_THRESHOLD)
     resistance = rolling_max * (1 - MeanReversionMode.RESISTANCE_THRESHOLD)
-
-    # Convert back to array if needed
-    if not hasattr(series, 'rolling'):
-        return support.values, resistance.values
-    return support, resistance
+    
+    return support.values, resistance.values
 
 
 def detect_regime(regime_score: float) -> str:
@@ -147,31 +148,7 @@ def calculate_volatility(closes, period: int = 20):
     
     return vol_annual.values
 
-def calculate_support_resistance(series, period: int = 20):
-    """
-    Calculate rolling support and resistance levels.
-    """
-    # Import pandas here for the helper function
-    import pandas as pd
-    
-    # Convert to pandas Series if needed
-    if not hasattr(series, 'rolling'):
-        series_array = pd.Series(series)
-    else:
-        series_array = series
-        
-    rolling_min = series_array.rolling(window=period, min_periods=period).min()
-    rolling_max = series_array.rolling(window=period, min_periods=period).max()
-    
-    # Fill NaN with first available value
-    rolling_min = rolling_min.bfill().fillna(series_array.iloc[0] * 0.95)
-    rolling_max = rolling_max.bfill().fillna(series_array.iloc[0] * 1.05)
-    
-    # Add slight buffer
-    support = rolling_min * (1 + MeanReversionMode.SUPPORT_THRESHOLD)
-    resistance = rolling_max * (1 - MeanReversionMode.RESISTANCE_THRESHOLD)
-    
-    return support.values, resistance.values
+
 
 
 # ============================================================================
@@ -247,35 +224,36 @@ class AdaptiveStrategy(Strategy):
         """Get thresholds based on current bar's volatility."""
         current_vol = self.volatility[-1]
         
+        # Lower thresholds to increase trade frequency
         if current_vol < 0.20:
             return {
-                'aggressive_entry': 0.2,
+                'aggressive_entry': 0.1,   # Was 0.2
                 'aggressive_exit': -0.3,
-                'defensive_short': -0.8,
+                'defensive_short': -0.6,   # Was -0.8
                 'defensive_cover': 0.3,
                 'position_multiplier': 1.0
             }
         elif current_vol < 0.50:
             return {
-                'aggressive_entry': 0.1,
+                'aggressive_entry': 0.0,   # Was 0.1
                 'aggressive_exit': -0.2,
-                'defensive_short': -0.6,
+                'defensive_short': -0.4,   # Was -0.6
                 'defensive_cover': 0.2,
                 'position_multiplier': 0.9
             }
         elif current_vol < 0.80:
             return {
-                'aggressive_entry': 0.0,
+                'aggressive_entry': -0.1,  # Was 0.0
                 'aggressive_exit': -0.1,
-                'defensive_short': -0.4,
+                'defensive_short': -0.2,   # Was -0.4
                 'defensive_cover': 0.1,
                 'position_multiplier': 0.7
             }
         else:
             return {
-                'aggressive_entry': -0.1,
+                'aggressive_entry': -0.2,  # Was -0.1
                 'aggressive_exit': -0.3,
-                'defensive_short': -0.3,
+                'defensive_short': -0.1,   # Was -0.3
                 'defensive_cover': 0.1,
                 'position_multiplier': 0.5
             }

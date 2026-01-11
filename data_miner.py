@@ -198,8 +198,21 @@ def create_weekly_sample(df: pd.DataFrame) -> pd.DataFrame:
     # Set Date as index
     df_temp = df.set_index('Date')
 
-    # Resample to weekly (Monday)
-    weekly = df_temp.resample('W-MON').last().dropna()
+    # Resample to weekly (Monday) using correct aggregation
+    # Open: First day of week
+    # High: Max of week
+    # Low: Min of week
+    # Close: Last day of week
+    # Volume: Sum of week
+    # VIX: Last day of week
+    weekly = df_temp.resample('W-MON').agg({
+        'Open': 'first',
+        'High': 'max',
+        'Low': 'min',
+        'Close': 'last',
+        'Volume': 'sum',
+        'VIX': 'last'
+    }).dropna()
 
     # Reset index
     weekly = weekly.reset_index()
@@ -292,12 +305,18 @@ def ai_annotate_loop(
     if api_key is None:
         api_key = Config.DEEPSEEK_API_KEY
 
+    # MOCK MODE: If no API key, use heuristic
+    use_mock_ai = False
     if not api_key:
-        raise ValueError("DEEPSEEK_API_KEY not found. Please set it in .env file.")
+        print("\n[WARNING] DEEPSEEK_API_KEY not found. Using MOCK AI (heuristic rules).")
+        print("This allows testing with real market data without an API key.")
+        use_mock_ai = True
+        # raise ValueError("DEEPSEEK_API_KEY not found. Please set it in .env file.")
 
     print(f"\n[Step 2] AI Annotation Loop (DeepSeek)")
     print(f"  Processing {len(weekly_df)} weeks...")
-    print(f"  This will take ~{len(weekly_df) * 2} seconds...")
+    print(f"  Mode: {'MOCK (Heuristic)' if use_mock_ai else 'REAL (DeepSeek API)'}")
+    print(f"  This will take ~{len(weekly_df) * (0.1 if use_mock_ai else 2)} seconds...")
 
     ai_scores = []
 
@@ -315,25 +334,44 @@ def ai_annotate_loop(
         if week_num % progress_interval == 0 or week_num == 1:
             print(f"  Week {week_num}/{len(weekly_df)}: VIX={vix_value:.2f}, Change={pct_change:.2f}%")
 
-        # Call DeepSeek API
-        score = call_deepseek_api(vix_value, pct_change, api_key)
+        score = None
+        
+        if not use_mock_ai:
+            # Call DeepSeek API
+            score = call_deepseek_api(vix_value, pct_change, api_key)
 
         if score is not None:
             ai_scores.append(score)
             print(f"    -> AI Score: {score:.2f}")
         else:
-            # Fallback: Use simple rule-based classification
-            if pct_change > 2:
-                fallback_score = 1.0
-            elif pct_change < -2:
-                fallback_score = -1.0
+            # Fallback / Mock Logic: Use simple rule-based classification
+            # VIX High -> Bearish/Sideways
+            # VIX Low + Positive Return -> Bullish
+            
+            if vix_value > 30:
+                fallback_score = -0.8  # High fear
+            elif vix_value > 20:
+                if pct_change < -2:
+                    fallback_score = -0.6 # Bearish
+                else:
+                    fallback_score = 0.0  # Sideways/Volatile
             else:
-                fallback_score = 0.0
+                # VIX < 20 (Low fear)
+                if pct_change > 1:
+                    fallback_score = 0.8  # Bullish
+                elif pct_change < -1:
+                    fallback_score = -0.2 # Slight correction
+                else:
+                    fallback_score = 0.4  # Mildly bullish
+            
             ai_scores.append(fallback_score)
-            print(f"    -> Fallback Score: {fallback_score:.2f} (rule-based)")
+            if not use_mock_ai:
+                print(f"    -> Fallback Score: {fallback_score:.2f} (rule-based)")
+            # else: don't spam print in mock mode for every row
 
         # Rate limiting - small delay between calls
-        time.sleep(0.5)
+        if not use_mock_ai:
+            time.sleep(0.5)
 
     # Add AI scores to DataFrame
     weekly_df = weekly_df.copy()

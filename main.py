@@ -63,6 +63,7 @@ class Config:
 
 def run_single_backtest(
     n_days: int = Config.DEFAULT_DAYS,
+    data_file: str = None,
     plot: bool = True,
     verbose: bool = True
 ) -> dict:
@@ -71,6 +72,7 @@ def run_single_backtest(
 
     Args:
         n_days: Number of trading days to generate
+        data_file: Path to CSV data file (optional)
         plot: Whether to generate plots
         verbose: Whether to print detailed output
 
@@ -84,19 +86,36 @@ def run_single_backtest(
         print("\nInitializing...")
 
     # ========================================================================
-    # STEP 1: DATA GENERATION
+    # STEP 1: DATA GENERATION / LOADING
     # ========================================================================
-    if verbose:
-        print("\n[Step 1] Generating Mock Data with AI Signals...")
+    if data_file:
+        if verbose:
+            print(f"\n[Step 1] Loading Real Data from {data_file}...")
+        
+        import pandas as pd
+        data = pd.read_csv(data_file)
+        data['Date'] = pd.to_datetime(data['Date'])
+        data.set_index('Date', inplace=True)
+        
+        # Ensure required columns exist
+        required_cols = ['Open', 'High', 'Low', 'Close', 'Volume', 'AI_Regime_Score', 'AI_Stock_Sentiment']
+        missing = [c for c in required_cols if c not in data.columns]
+        if missing:
+            print(f"[WARNING] Missing columns in data file: {missing}")
+            # If AI columns missing, maybe fill with defaults? 
+            # But for now let's assume data_miner output which has them.
+    else:
+        if verbose:
+            print("\n[Step 1] Generating Mock Data with AI Signals...")
 
-    # CRITICAL FIX: Removed add_signal_impact=True to prevent self-fulfilling prophecy
-    # We want to test if the signals work on UNMODIFIED price data
-    data = prepare_data(
-        n_days=n_days,
-        start_price=Config.START_PRICE,
-        volatility=Config.VOLATILITY,
-        add_signal_impact=False
-    )
+        # CRITICAL FIX: Removed add_signal_impact=True to prevent self-fulfilling prophecy
+        # We want to test if the signals work on UNMODIFIED price data
+        data = prepare_data(
+            n_days=n_days,
+            start_price=Config.START_PRICE,
+            volatility=Config.VOLATILITY,
+            add_signal_impact=False
+        )
 
     # Validate data
     validate_dataframe(data)
@@ -284,6 +303,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--data-file', '-f',
+        type=str,
+        help='Path to CSV data file (skips mock data generation)'
+    )
+
+    parser.add_argument(
         '--compare', '-c',
         action='store_true',
         help='Run strategy comparison mode'
@@ -336,6 +361,7 @@ def main():
             # Default: Run single backtest
             metrics = run_single_backtest(
                 n_days=args.days,
+                data_file=args.data_file,
                 plot=not args.no_plot,
                 verbose=not args.quiet
             )

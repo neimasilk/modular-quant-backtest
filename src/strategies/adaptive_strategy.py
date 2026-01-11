@@ -295,6 +295,10 @@ class AdaptiveStrategy(Strategy):
 
         Returns:
             True if position should be closed due to stop-loss
+
+        CRITICAL FIX: Entry price is now set at actual entry point in
+        execute_*_mode() methods, not here. This prevents incorrect
+        entry prices when market gaps after position entry.
         """
         if not self.position:
             # Reset tracking when no position
@@ -303,14 +307,19 @@ class AdaptiveStrategy(Strategy):
             self.lowest_since_entry = None
             return False
 
-        current_price = self.data.Close[-1]
-
-        # Initialize tracking when we first have a position
+        # CRITICAL: entry_price should always be set when we have a position
+        # It is set at the actual entry point in execute_*_mode() methods.
+        # If this condition is triggered, there is a bug in the entry logic.
         if self.entry_price is None:
-            self.entry_price = current_price
-            self.highest_since_entry = current_price
-            self.lowest_since_entry = current_price
+            # Fallback: set to current price (but this indicates a bug)
+            import warnings
+            warnings.warn("entry_price is None while position exists! This should not happen.")
+            self.entry_price = self.data.Close[-1]
+            self.highest_since_entry = self.entry_price
+            self.lowest_since_entry = self.entry_price
             return False
+
+        current_price = self.data.Close[-1]
 
         # Update highest/lowest for trailing stop
         if self.position.is_long:
@@ -376,11 +385,19 @@ class AdaptiveStrategy(Strategy):
                 size = self.aggressive_size * pos_multiplier
                 self.buy(size=min(size, 0.95))  # Cap at 95%
                 self.regime_trades['BULLISH'] += 1
+                # CRITICAL FIX: Set entry price at actual entry point
+                self.entry_price = self.data.Close[-1]
+                self.highest_since_entry = self.entry_price
+                self.lowest_since_entry = self.entry_price
 
         # EXIT LOGIC: Strict numerical comparison
         elif current_sentiment < exit_threshold:
             if self.position and self.position.is_long:
                 self.position.close()
+                # Reset tracking when exiting
+                self.entry_price = None
+                self.highest_since_entry = None
+                self.lowest_since_entry = None
 
     def execute_defensive_mode(self):
         """
@@ -408,11 +425,19 @@ class AdaptiveStrategy(Strategy):
                 size = self.defensive_size * pos_multiplier
                 self.sell(size=size)
                 self.regime_trades['BEARISH'] += 1
+                # CRITICAL FIX: Set entry price at actual entry point
+                self.entry_price = self.data.Close[-1]
+                self.highest_since_entry = self.entry_price
+                self.lowest_since_entry = self.entry_price
 
         # COVER LOGIC: Strict numerical comparison
         elif current_sentiment > cover_threshold:
             if self.position and self.position.is_short:
                 self.position.close()
+                # Reset tracking when exiting
+                self.entry_price = None
+                self.highest_since_entry = None
+                self.lowest_since_entry = None
 
     def execute_mean_reversion_mode(self):
         """
@@ -444,6 +469,10 @@ class AdaptiveStrategy(Strategy):
                     self.position.close()  # Cover any existing short
                 self.buy(size=dynamic_size)
                 self.regime_trades['SIDEWAYS'] += 1
+                # CRITICAL FIX: Set entry price at actual entry point
+                self.entry_price = self.data.Close[-1]
+                self.highest_since_entry = self.entry_price
+                self.lowest_since_entry = self.entry_price
 
         # SELL ENTRY: Price near resistance
         elif current_price >= current_resistance * 0.99:  # Within 1% of resistance
@@ -452,18 +481,30 @@ class AdaptiveStrategy(Strategy):
                     self.position.close()  # Exit any existing long
                 self.sell(size=dynamic_size)
                 self.regime_trades['SIDEWAYS'] += 1
+                # CRITICAL FIX: Set entry price at actual entry point
+                self.entry_price = self.data.Close[-1]
+                self.highest_since_entry = self.entry_price
+                self.lowest_since_entry = self.entry_price
 
         # EXIT LONG: Price back to middle of range
         if self.position and self.position.is_long:
             mid_point = (current_support + current_resistance) / 2
             if current_price >= mid_point:
                 self.position.close()
+                # Reset tracking when exiting
+                self.entry_price = None
+                self.highest_since_entry = None
+                self.lowest_since_entry = None
 
         # EXIT SHORT: Price back to middle of range
         if self.position and self.position.is_short:
             mid_point = (current_support + current_resistance) / 2
             if current_price <= mid_point:
                 self.position.close()
+                # Reset tracking when exiting
+                self.entry_price = None
+                self.highest_since_entry = None
+                self.lowest_since_entry = None
 
     def next(self):
         """
@@ -476,6 +517,10 @@ class AdaptiveStrategy(Strategy):
         if self.check_stop_loss():
             if self.position:
                 self.position.close()
+                # Reset tracking after stop-loss exit
+                self.entry_price = None
+                self.highest_since_entry = None
+                self.lowest_since_entry = None
             return
 
         # Detect current regime

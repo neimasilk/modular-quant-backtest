@@ -1,0 +1,33 @@
+2026-01-13 00:20:54,353 | INFO     | LLM Sanity Checker initialized successfully
+2026-01-13 00:20:54,354 | INFO     | Paper Trading Engine initialized
+2026-01-13 00:20:54,354 | INFO     |   Cash: $100,000.00
+2026-01-13 00:20:54,354 | INFO     |   Equity: $100,000.00
+2026-01-13 00:20:54,354 | INFO     |   Open Positions: 0
+2026-01-13 00:21:04,731 | INFO     | LLM Sanity Checker initialized successfully
+2026-01-13 00:21:04,732 | INFO     | Paper Trading Engine initialized
+2026-01-13 00:21:04,732 | INFO     |   Cash: $100,000.00
+2026-01-13 00:21:04,732 | INFO     |   Equity: $100,000.00
+2026-01-13 00:21:04,732 | INFO     |   Open Positions: 0
+2026-01-13 00:21:04,732 | INFO     | ============================================================
+2026-01-13 00:21:04,734 | INFO     | DAILY PAPER TRADING CHECK
+2026-01-13 00:21:04,734 | INFO     | ============================================================
+2026-01-13 00:21:05,574 | INFO     | Price move (+0.7%) below threshold
+2026-01-13 00:21:05,576 | INFO     | 
+============================================================
+PAPER TRADING SUMMARY
+============================================================
+Date: 2026-01-13 00:21:05
+
+Cash:              $100,000.00
+Positions Value:   $0.00
+Total Equity:      $100,000.00
+Peak Equity:       $100,000.00
+
+Return:            +0.00%
+Drawdown:          0.00%
+
+Open Positions:    0
+Total Trades:      0
+============================================================
+2026-01-13 00:21:05,576 | INFO     | No trades to export
+2026-01-13 00:21:05,583 | INFO     | Equity curve exported to experiments/active/EXP-2025-008-paper-trading/results\equity_curve_20260113.csv

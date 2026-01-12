@@ -1,0 +1,25 @@
+{
+  "cash": 100000,
+  "positions": [],
+  "trades": [],
+  "last_update": "2026-01-13T00:21:05.575450",
+  "total_equity": 100000,
+  "peak_equity": 100000,
+  "daily_snapshots": [
+    {
+      "date": "2026-01-13T00:21:04.732449",
+      "cash": 100000,
+      "equity": 100000,
+      "positions_value": 0.0,
+      "total_equity": 100000
+    },
+    {
+      "date": "2026-01-13T00:21:05.574882",
+      "cash": 100000,
+      "positions_value": 0,
+      "total_equity": 100000,
+      "num_positions": 0,
+      "num_trades_today": 0
+    }
+  ]
+}

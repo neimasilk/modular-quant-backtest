@@ -1,7 +1,7 @@
 # Experiment Index
 
 > **Purpose:** Master index of all experiments conducted in this project
-> **Last Updated:** 2025-01-11
+> **Last Updated:** 2025-01-12
 
 ---
 
@@ -9,12 +9,13 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 7 |
+| Total Experiments | 8 |
 | Successful | 4 |
 | Failed | 1 |
-| Partial | 1 |
-| Active | 4 |
+| Partial | 2 |
+| Active | 1 |
 | Completed | 3 |
+| Archived | 4 |
 
 ---
 
@@ -79,9 +80,18 @@
 - **Date:** 2025-01-11
 - **Hypothesis:** Fundamental value strategy will generate alpha vs benchmark
 - **Result:** +2.62% vs +42.76% benchmark (2023 - underperformed in growth market)
-- **Outcome:** Active (Testing phase)
-- **Key Learning:** Value underperforms in strong bull markets (expected); needs longer timeframe validation
-- **Link:** [./active/EXP-2025-007-value-investing/](./active/EXP-2025-007-value-investing/)
+- **Outcome:** Partial (Frozen for EXP-008)
+- **Key Learning:** Value underperforms in strong bull markets (expected); needs longer timeframe validation (5-10 years)
+- **Link:** [./archived/partial/EXP-2025-007-value-investing/](./archived/partial/EXP-2025-007-value-investing/)
+
+## EXP-2025-008: LLM-Based News Sanity Check ("The Bullshit Detector")
+
+- **Date:** 2025-01-12
+- **Hypothesis:** LLM validation of news substance during extreme price moves will improve risk management and reduce FOMO/Panic decisions
+- **Result:** TBD (Shadow testing phase)
+- **Outcome:** Active
+- **Key Learning:** Different from EXP-005 - uses price trigger first, then LLM validates substance
+- **Link:** [./active/EXP-2025-008-llm-sanity-check/](./active/EXP-2025-008-llm-sanity-check/)
 
 ---
 
@@ -137,10 +147,13 @@
 | `spy` | S&P 500 tests | EXP-2025-001 |
 | `vix` | VIX-based strategies | EXP-2025-001 |
 | `sentiment` | Sentiment-based strategies | EXP-2025-001, EXP-2025-005 |
-| `llm` | LLM/DeepSeek integration | EXP-2025-005 |
+| `llm` | LLM/DeepSeek integration | EXP-2025-005, EXP-2025-008 |
 | `look-ahead-fix` | Bias fixing experiments | EXP-2025-001 |
 | `stop-loss` | Risk management tests | |
 | `walk-forward` | Walk-forward optimization | |
+| `sanity-check` | News validation | EXP-2025-008 |
+| `risk-management` | Psychology & risk | EXP-2025-008 |
+| `value-investing` | Fundamental strategies | EXP-2025-007 |
 
 ---
 
@@ -154,4 +167,5 @@
 
 ### Experiments to Revisit
 - EXP-2025-005: Test LLM sentiment in bear/sideways markets (may perform better)
+- EXP-2025-007: May revisit for longer timeframe validation (2018-2024)
 - ~~EXP-2025-006~~: DO NOT revisit - approach proven ineffective

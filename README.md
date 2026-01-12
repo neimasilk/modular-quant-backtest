@@ -1,12 +1,12 @@
 # Modular Quantitative Backtesting Framework
 
 > **Status:** Active Development (v1.0)
-> **Last Updated:** 2025-01-11
+> **Last Updated:** 2025-01-12
 
 Framework backtesting modular untuk strategi trading kuantitatif dengan dua family strategi:
 
 1. **Adaptive Strategy (FROZEN)** - Technical, regime-based, defensive
-2. **Value Investing Strategy (ACTIVE)** - Fundamental, long-term
+2. **LLM Sanity Check (ACTIVE)** - Hybrid technical trigger + LLM filter, anti-FOMO/Panic
 
 ---
 
@@ -15,7 +15,7 @@ Framework backtesting modular untuk strategi trading kuantitatif dengan dua fami
 | Strategy | Type | Status | Best For |
 |----------|------|--------|----------|
 | Adaptive (FROZEN) | Technical | Production-ready | Bear markets, volatile conditions |
-| Value Investing | Fundamental | Testing | Long-term, 5-10 year horizon |
+| LLM Sanity Check | Hybrid | Testing | Risk management, anti-FOMO/Panic |
 
 ---
 
@@ -37,16 +37,23 @@ Framework backtesting modular untuk strategi trading kuantitatif dengan dua fami
 - Underperforms in mega-bull markets (by design)
 - See: `docs/FROZEN_STRATEGY.md`
 
-### 2. Value Investing Strategy (ACTIVE)
+### 2. LLM Sanity Check (ACTIVE) - EXP-2025-008
 
-**Location:** `src/strategies/value_investing_strategy.py`
+**Location:** `src/llm/sanity_checker.py`
 
-**Type:** Fundamental, bottom-up, long-term
+**Type:** Hybrid (Technical Trigger + LLM Filter)
 
-**Key Results (2023 Initial Test):**
-- Portfolio: **+2.62%** vs Benchmark **+42.76%**
-- Underperformed in growth market (expected)
-- See: `experiments/active/EXP-2025-007-value-investing/`
+**Focus:** Risk Management & Psychology ("The Bullshit Detector")
+
+**Hypothesis:** LLM validation of news substance during extreme price moves will:
+- Reduce drawdown by avoiding "pump and dump"
+- Improve win rate by buying overreactions
+
+**Key Difference from EXP-005:**
+- EXP-005: LLM dulu → Trade (gagal)
+- EXP-008: Harga gerak dulu → LLM validasi → FADE/FOLLOW/IGNORE
+
+**See:** `experiments/active/EXP-2025-008-llm-sanity-check/`
 
 ---
 
@@ -60,13 +67,15 @@ modular-quant-backtest/
 ├── .env.example
 │
 ├── docs/                             # Documentation
-│   ├── FROZEN_STRATEGY.md            # Adaptive strategy docs
-│   └── VALUE_INVESTING_ROADMAP.md    # Value strategy plan
+│   └── FROZEN_STRATEGY.md            # Adaptive strategy docs
 │
 ├── src/
+│   ├── llm/
+│   │   └── sanity_checker.py         # NEW: LLM "Bullshit Detector"
 │   ├── data/
 │   │   ├── data_generator.py
-│   │   └── fundamental_fetcher.py   # NEW: Fundamental data
+│   │   ├── news_fetcher.py           # News fetcher (EXP-005)
+│   │   └── fundamental_fetcher.py   # Value investing data (frozen)
 │   ├── strategies/
 │   │   ├── adaptive_strategy.py      # FROZEN: Technical strategy
 │   │   ├── regime_threshold.py
@@ -74,7 +83,7 @@ modular-quant-backtest/
 │   │   ├── defensive_mode.py
 │   │   ├── mean_reversion_mode.py
 │   │   ├── bull_optimized_strategy.py # FAILED: Do not use
-│   │   └── value_investing_strategy.py # NEW: Value strategy
+│   │   └── value_investing_strategy.py # Frozen: Value strategy
 │   └── engines/
 │       └── backtest_engine.py
 │
@@ -88,10 +97,12 @@ modular-quant-backtest/
 │   │   ├── EXP-2025-003-multi-ticker-test/
 │   │   ├── EXP-2025-004-bear-market-2022/
 │   │   ├── EXP-2025-005-real-news-sentiment/
-│   │   └── EXP-2025-007-value-investing/
+│   │   └── EXP-2025-008-llm-sanity-check/  # NEW: Active experiment
 │   └── archived/
-│       └── failed/
-│           └── EXP-2025-006-bull-market-optimization/
+│       ├── failed/
+│       │   └── EXP-2025-006-bull-market-optimization/
+│       └── partial/
+│           └── EXP-2025-007-value-investing/  # Frozen
 │
 ├── data/                             # Generated data files
 └── output/                           # Backtest results
@@ -161,7 +172,8 @@ results = backtester.run()
 | 004 | Bear Market 2022 | **+44% outperformance** | ✅ Success |
 | 005 | LLM News Sentiment | Underperformed | ⚠️ Partial |
 | 006 | Bull Market Optimization | Made performance worse | ❌ Failed |
-| 007 | Value Investing | Testing | 🔄 Active |
+| 007 | Value Investing | Testing | ❄️ Frozen |
+| 008 | LLM Sanity Check | TBD | 🔄 Active |
 
 ---
 
@@ -169,16 +181,16 @@ results = backtester.run()
 
 1. **Adaptive Strategy CRUSHES bear markets** - Proven 44% outperformance
 2. **Trailing stop approach is DEAD** - EXP-006 proved this hurts performance
-3. **LLM sentiment needs real news** - Price-based sentiment is insufficient
-4. **Value investing needs long timeframe** - 2023 test showed expected underperformance
+3. **LLM sentiment needs real news** - EXP-005 underperformed with price-based sentiment
+4. **LLM Sanity Check approach** - EXP-008 uses price trigger FIRST, then validates with LLM
 
 ---
 
 ## Next Sessions
 
-1. **Value Investing** - Test longer timeframe (2018-2024)
-2. **Value vs Bear Market** - Validate outperformance in downturns
-3. **Paper Trading** - When strategies are validated
+1. **Shadow Testing EXP-008** - Run `shadow_test.py` to validate LLM judgment
+2. **Tune LLM Prompt** - Adjust based on shadow test accuracy
+3. **Paper Trading** - When LLM accuracy > 70%
 
 ---
 

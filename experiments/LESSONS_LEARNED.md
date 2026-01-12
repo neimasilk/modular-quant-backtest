@@ -1,7 +1,7 @@
 # Lessons Learned
 
 > **Purpose:** Distilled insights from all experiments to prevent repeated mistakes
-> **Last Updated:** 2025-01-11
+> **Last Updated:** 2025-01-12
 
 ---
 
@@ -211,6 +211,45 @@
 - Re-entry too late
 
 **This approach is DEAD.** Do not revisit.
+
+---
+
+## From EXP-2025-008 (LLM Sanity Check) - ACTIVE
+
+### Key Difference from EXP-005
+
+| Aspect | EXP-005 (Failed) | EXP-008 (Active) |
+|--------|------------------|------------------|
+| Trigger | LLM asks for sentiment | Price moves FIRST, then LLM validates |
+| Role | Decision maker | Auditor/Filter |
+| Output | Positive/Negative | FADE/FOLLOW/IGNORE + substance score |
+| Goal | Predict direction | Prevent FOMO/Panic mistakes |
+
+### Hypothesis
+Using LLM to validate whether extreme price moves (>3%) are justified by actual news substance will:
+1. Reduce drawdown by avoiding "pump and dump" rallies
+2. Improve win rate by buying dips when news is overreaction
+
+### Design Decisions
+- **Only call LLM on volatility spikes** (>3% move) - saves API costs
+- **Skeptical prompt** - Default to "this is bullshit" until proven otherwise
+- **JSON output** - Strict format for programmatic trading decisions
+- **Shadow testing first** - Cannot backtest historically (need precise news + timestamps)
+
+### Decision Matrix
+
+| Condition | LLM Analysis | Action |
+|-----------|--------------|--------|
+| Price UP + Low substance | Hype/Noise | SHORT_SCALP (sell the rip) |
+| Price UP + High substance | Real news | BUY_TREND (follow) |
+| Price DOWN + Low substance | Overreaction | BUY_DIP (contrarian) |
+| Price DOWN + High substance | Real trouble | HARD_EXIT (don't catch knife) |
+
+### TBD (Learning in Progress)
+- [ ] LLM accuracy on real-time news validation
+- [ ] API cost per month with trigger-based approach
+- [ ] Optimal substance score thresholds (currently 4/7)
+- [ ] Integration with frozen Adaptive Strategy
 
 ---
 

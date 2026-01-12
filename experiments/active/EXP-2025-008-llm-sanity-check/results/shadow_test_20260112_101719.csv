@@ -1,0 +1,9 @@
+scenario,expected,actual,match,substance_score,verdict
+AI Washing Hype,SHORT_SCALP,SHORT_SCALP,True,2,FADE
+Panic Selling on Minor Issue,BUY_DIP,BUY_DIP,True,3,FADE
+Legitimate Earnings Beat,BUY_TREND,BUY_TREND,True,10,FOLLOW
+Real Trouble - Accounting Fraud,HARD_EXIT,HARD_EXIT,True,8,FOLLOW
+Merger Rumor (Unconfirmed),SHORT_SCALP,SHORT_SCALP,True,2,FADE
+Fed Rate Cut (Macro Event),FOLLOW,NEUTRAL,False,0,IGNORE
+CEO Resigns Suddenly,HARD_EXIT,HARD_EXIT,True,8,FOLLOW
+Product Recall (Limited Scope),BUY_DIP,BUY_DIP,True,4,FADE

@@ -1,0 +1,12 @@
+# Paper Trading State - Don't track dynamic files
+state.json
+*.log
+
+# Keep results but ignore large datasets
+results/*.csv
+!results/.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

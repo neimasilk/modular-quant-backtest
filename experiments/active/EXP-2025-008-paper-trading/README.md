@@ -2,17 +2,18 @@
 
 **Status:** 🔄 Active
 **Started:** 2025-01-13
-**Phase:** Paper Trading Validation
+**Last Updated:** 2025-01-13
+**Phase:** Paper Trading Validation (Real News & Multi-Ticker)
 
 ## Overview
 
-This experiment takes the successful **LLM Sanity Check** strategy (87.5% shadow test accuracy) into live paper trading mode. The system will:
+This experiment takes the successful **LLM Sanity Check** strategy (87.5% shadow test accuracy) into live paper trading mode. The system uses AI to validate "reasons" behind extreme price moves before trading.
 
-1. Fetch real-time market data daily
-2. Detect extreme price moves (>3% threshold)
-3. Use LLM to validate if the move is justified or "market being stupid"
-4. Execute trades based on LLM verdict
-5. Track performance with full logging
+**Key Features (v2 - Implemented 2025-01-13):**
+1. **Real News Feed:** Uses Yahoo Finance (via `yfinance`) to fetch *actual* headlines, replacing mock data.
+2. **Multi-Ticker Scanner:** Automatically scans 12 high-volatility tickers daily (NVDA, TSLA, MARA, MSTR, etc.).
+3. **Short Selling:** Fully functional short selling logic for "SHORT_SCALP" signals (fading the hype).
+4. **DeepSeek Integration:** Validates news substance on a 1-10 scale.
 
 ## Hypothesis
 
@@ -24,7 +25,7 @@ This experiment takes the successful **LLM Sanity Check** strategy (87.5% shadow
 |-------------|---------|--------|------------------|
 | **BUY_DIP** | Price drops >3% + Low substance score | Buy the dip | Market overreacting to bad news |
 | **BUY_TREND** | Price rises >3% + High substance score | Follow the trend | Justified move, go with flow |
-| **SHORT_SCALP** | Price rises >3% + Low substance score | Sell the rip | FOMO-driven pump, fade it |
+| **SHORT_SCALP** | Price rises >3% + Low substance score | Sell the rip (Short) | FOMO-driven pump, fade it |
 | **HARD_EXIT** | Price drops >3% + High substance score | Exit/avoid | Real problems, stay away |
 
 ## Risk Management
@@ -68,7 +69,7 @@ experiments/active/EXP-2025-008-paper-trading/
 ### Basic Commands
 
 ```bash
-# Run daily check (fetch data, check signals, execute trades)
+# Run daily scan (scans ALL 12 tickers)
 python paper_trade.py
 
 # Show current status (positions, P&L, metrics)
@@ -81,38 +82,17 @@ python paper_trade.py --report
 python paper_trade.py --reset
 ```
 
-### Advanced Options
+### Configuration
+The scan list is hardcoded in `paper_trade.py` and includes:
+`['NVDA', 'AMD', 'TSLA', 'META', 'GOOGL', 'AMZN', 'MSFT', 'AAPL', 'COIN', 'MSTR', 'MARA', 'RIOT']`
 
-```bash
-# Trade different ticker
-python paper_trade.py --ticker AAPL
+## Active Positions (as of 2026-01-13)
 
-# Start with different capital
-python paper_trade.py --cash 50000
-
-# Adjust position size (default 25%)
-python paper_trade.py --pos-size 0.20
-```
-
-### Scheduled Execution (Linux/Mac)
-
-Add to crontab for daily execution:
-
-```bash
-# Run every weekday at 9:30 AM (market open)
-30 9 * * 1-5 cd /path/to/modular-quant-backtest && python paper_trade.py >> logs/cron.log 2>&1
-
-# Run every weekday at 4:00 PM (market close)
-0 16 * * 1-5 cd /path/to/modular-quant-backtest && python paper_trade.py >> logs/cron.log 2>&1
-```
-
-### Scheduled Execution (Windows)
-
-Use Task Scheduler to run:
-```cmd
-cd D:\document\modular-quant-backtest
-python paper_trade.py
-```
+| Ticker | Type | Entry Price | Signal | Status |
+|--------|------|-------------|--------|--------|
+| **MARA** | SHORT | $10.65 | Low substance hype | Active |
+| **MSTR** | SHORT | $162.23 | Insider buy noise | Active |
+| **RIOT** | SHORT | $16.45 | Speculative pivot | Active |
 
 ## Success Criteria
 
@@ -123,91 +103,38 @@ python paper_trade.py
 | Max Drawdown | <20% | TBD |
 | Total Return | >10% | TBD |
 
-## Shadow Test Results (Baseline)
-
-From EXP-008 shadow testing:
-- **Accuracy:** 87.5% (7/8 correct predictions)
-- **Avoided FOMO traps:** 3 times
-- **Caught fake rallies:** 2 times
-- **Identified real breakdowns:** 2 times
-
 ## Daily Operations Checklist
 
 Each trading day:
 
-- [ ] Run `python paper_trade.py --status` to check positions
+- [ ] Run `python paper_trade.py` to scan markets and manage positions
 - [ ] Review any new signals generated
-- [ ] Check stop loss / take profit hits
-- [ ] Review daily log file for any errors
+- [ ] Check stop loss / take profit hits (automatic)
 - [ ] Weekly: Generate report with `--report` flag
 
 ## Known Limitations
 
-1. **News Source:** Currently using mock news generator based on price action
-   - Production should use real news API (NewsAPI, etc.)
+1. **Execution:** Paper trading assumes immediate fill at market price (slippage ignored).
+2. **Frequency:** Currently designed for Daily timeframe scans.
 
-2. **Execution:** Paper trading assumes immediate fill at market price
-   - Real trading would have slippage and partial fills
+## Completed Tasks (2025-01-13)
 
-3. **Single Asset:** Only trading one ticker at a time
-   - Could expand to multi-asset portfolio
-
-4. **No Shorting:** Currently long-only for simplicity
-   - SHORT_SCALP signal exists but not fully implemented
+- [x] **Real News Integration:** Replaced mock news with Yahoo Finance API.
+- [x] **Short Selling:** Fixed P&L logic to support short positions.
+- [x] **Multi-Ticker Scanner:** Now scans 12 tickers automatically.
+- [x] **Live Validation:** Successfully detected and traded MARA, MSTR, RIOT.
 
 ## Next Steps
 
-- [ ] 1 week of paper trading data
+- [ ] 1 week of paper trading data collection
 - [ ] Compare performance vs buy-and-hold
 - [ ] Analyze win rate by signal type
-- [ ] Implement real news feed
-- [ ] Add short selling capability
-- [ ] Expand to multiple tickers
 
 ## State Persistence
 
-The paper trading engine maintains persistent state in `state.json`:
-
-```json
-{
-  "cash": 100000.00,
-  "positions": [...],
-  "trades": [...],
-  "total_equity": 100000.00,
-  "peak_equity": 100000.00,
-  "daily_snapshots": [...]
-}
-```
-
-This allows the system to resume after restarts without losing position data.
-
-## Troubleshooting
-
-### No API Key Error
-```
-ValueError: DEEPSEEK_API_KEY not found
-```
-Solution: Set up `.env` file with your API key
-
-### No Data Retrieved
-```
-WARNING: No data retrieved for NVDA
-```
-Solution: Check internet connection, try during market hours
-
-### State File Corrupted
-```
-Error loading state: ...
-```
-Solution: Run `python paper_trade.py --reset` to start fresh
+The paper trading engine maintains persistent state in `state.json`.
 
 ## Links
 
 - [Shadow Test Results](../../archived/successful/EXP-2025-008-llm-sanity-check/)
 - [LLM Sanity Checker Code](../../../src/llm/sanity_checker.py)
-- [Experiment Workflow](../../EXPERIMENT_WORKFLOW.md)
-
----
-
-**Last Updated:** 2025-01-13
-**Next Review:** 2025-01-20 (after 1 week)

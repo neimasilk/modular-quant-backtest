@@ -34,26 +34,6 @@ def print_banner():
     print("=" * 65 + "\n")
 
 
-def run_daily_check(config: PaperTradingConfig) -> dict:
-    """Run daily paper trading check."""
-    print("[*] Starting daily check...")
-
-    engine = PaperTradingEngine(config)
-    result = engine.run_daily_check()
-
-    # Export results
-    trades_file = engine.export_trades_csv()
-    equity_file = engine.export_equity_curve()
-
-    print("\n[OK] Daily check complete!")
-    if trades_file:
-        print(f"     Trades: {trades_file}")
-    if equity_file:
-        print(f"     Equity: {equity_file}")
-
-    return result
-
-
 def show_status(config: PaperTradingConfig):
     """Show current paper trading status."""
     print("[*] Loading current status...\n")
@@ -215,24 +195,24 @@ def reset_state(config: PaperTradingConfig):
 
 def main():
     """Main entry point."""
+
+    # List of tickers to scan for opportunities
+    SCAN_LIST = [
+        'NVDA', 'AMD', 'TSLA', 'META', 'GOOGL', 'AMZN', 'MSFT', 'AAPL',
+        'COIN', 'MSTR', 'MARA', 'RIOT'
+    ]
+
     parser = argparse.ArgumentParser(
         description="Paper Trading Runner - EXP-2025-008",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python paper_trade.py              # Run daily check
+  python paper_trade.py              # Run daily scan across multiple tickers
   python paper_trade.py --status     # Show current status
   python paper_trade.py --report     # Generate detailed report
   python paper_trade.py --reset      # Reset state
-  python paper_trade.py --ticker AAPL --cash 50000
+  python paper_trade.py --cash 50000
         """
-    )
-
-    parser.add_argument(
-        '--ticker', '-t',
-        type=str,
-        default='NVDA',
-        help='Ticker to trade (default: NVDA)'
     )
 
     parser.add_argument(
@@ -268,9 +248,9 @@ Examples:
 
     args = parser.parse_args()
 
-    # Create config
+    # Create config (ticker is now a placeholder)
     config = PaperTradingConfig(
-        ticker=args.ticker,
+        ticker="MULTI_SCAN", 
         initial_cash=args.cash,
         position_size_pct=args.pos_size
     )
@@ -285,9 +265,20 @@ Examples:
     elif args.reset:
         reset_state(config)
     else:
-        run_daily_check(config)
+        # Pass the full list to the trading engine
+        print(f"[*] Scanning {len(SCAN_LIST)} tickers...")
+        engine = PaperTradingEngine(config)
+        engine.run_daily_check(tickers_to_scan=SCAN_LIST)
+        
+        # Export results after the scan
+        trades_file = engine.export_trades_csv()
+        equity_file = engine.export_equity_curve()
 
-    print("\n" + "=" * 65 + "\n")
+        print("\n[OK] Daily scan complete!")
+        if trades_file:
+            print(f"     Trades: {trades_file}")
+        if equity_file:
+            print(f"     Equity: {equity_file}")
 
 
 if __name__ == "__main__":

@@ -288,10 +288,7 @@ class PaperTradingEngine:
 
     def get_latest_news(self, ticker: str) -> str:
         """
-        Get latest news headline for a ticker.
-
-        For paper trading, we'll use a mock news generator based on price action.
-        In production, this would fetch real news from an API.
+        Get latest news headline for a ticker from yfinance.
 
         Args:
             ticker: Stock symbol
@@ -299,30 +296,32 @@ class PaperTradingEngine:
         Returns:
             News headline string
         """
-        # Get recent price action
-        data = self.fetch_market_data(ticker, days=5)
-        if data is None or len(data) < 2:
-            return f"{ticker} - No recent data available"
+        try:
+            t = yf.Ticker(ticker)
+            news = t.news
+            
+            if not news:
+                self.logger.warning(f"No news found for {ticker} via yfinance")
+                return f"{ticker} - No recent news available"
 
-        latest = data.iloc[-1]
-        prev = data.iloc[-2]
+            # Get the most recent news item
+            # Sort by date just in case
+            latest_news = news[0]
+            title = latest_news.get('content', {}).get('title', "")
+            summary = latest_news.get('content', {}).get('summary', "")
+            
+            if not title:
+                # Try alternative structure (some yfinance versions differ)
+                title = latest_news.get('title', "No Title")
+                summary = latest_news.get('summary', "")
 
-        price_change = (latest['Close'] - prev['Close']) / prev['Close'] * 100
-        volume_change = 0
-        if prev['Volume'] > 0:
-            volume_change = (latest['Volume'] - prev['Volume']) / prev['Volume'] * 100
+            full_news = f"{title}. {summary}"
+            self.logger.info(f"Fetched latest news for {ticker}: {title[:50]}...")
+            return full_news
 
-        # Generate mock news based on price action
-        if abs(price_change) > 5:
-            if price_change > 0:
-                return f"{ticker} surges {price_change:.1f}% on heavy volume amid positive market sentiment"
-            else:
-                return f"{ticker} plummets {abs(price_change):.1f}% on concerns about market conditions"
-        elif abs(price_change) > 2:
-            direction = "gains" if price_change > 0 else "declines"
-            return f"{ticker} {direction} {abs(price_change):.1f}% in latest trading session"
-        else:
-            return f"{ticker} moves {price_change:+.1f}% in quiet trading session"
+        except Exception as e:
+            self.logger.error(f"Error fetching news for {ticker}: {e}")
+            return f"{ticker} - News fetch error"
 
     # ========================================================================
     # TRADING LOGIC
@@ -519,10 +518,15 @@ class PaperTradingEngine:
         holding_days = (exit_date - entry_date).days
 
         pnl, pnl_pct = position.unrealized_pnl(exit_price)
-        exit_value = position.shares * exit_price
+        
+        # Calculate amount to return to cash balance
+        # We always deducted (entry_price * shares) at entry.
+        # So we return that original amount + the profit (or - loss).
+        entry_value = position.shares * position.entry_price
+        return_to_cash = entry_value + pnl
 
         # Add proceeds to cash
-        self.state.cash += exit_value
+        self.state.cash += return_to_cash
 
         # Create trade record
         trade = Trade(
@@ -555,9 +559,13 @@ class PaperTradingEngine:
     # DAILY RUN
     # ========================================================================
 
-    def run_daily_check(self) -> Dict[str, Any]:
+    def run_daily_check(self, tickers_to_scan: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Run daily paper trading check.
+
+        Args:
+            tickers_to_scan: Optional list of tickers to check for new opportunities.
+                           If None, uses self.config.ticker.
 
         This should be called once per day (or scheduled via cron).
         """
@@ -593,19 +601,37 @@ class PaperTradingEngine:
             self.logger.warning("Trading paused due to max drawdown")
             # Could implement pause logic here
 
+        # Determine scan list
+        scan_list = tickers_to_scan if tickers_to_scan else [self.config.ticker]
+        if tickers_to_scan:
+            self.logger.info(f"Scanning {len(scan_list)} tickers for opportunities...")
+
         # Generate new signals if under max positions
         if len(self.state.positions) < self.config.max_positions:
-            signals = self.generate_signals(self.config.ticker)
-
-            for signal in signals:
-                # Check if already have position in this ticker
-                has_position = any(
-                    p.ticker == signal['ticker'] for p in self.state.positions
-                )
-                if not has_position:
-                    self.execute_entry(signal)
+            for ticker in scan_list:
+                # Stop scanning if we filled up positions
+                if len(self.state.positions) >= self.config.max_positions:
+                    self.logger.info(f"Max positions ({self.config.max_positions}) reached. Stopping scan.")
+                    break
+                
+                # Check signals for this ticker
+                try:
+                    signals = self.generate_signals(ticker)
+                    
+                    for signal in signals:
+                        # Check if already have position in this ticker
+                        has_position = any(
+                            p.ticker == signal['ticker'] for p in self.state.positions
+                        )
+                        if not has_position:
+                            self.execute_entry(signal)
+                            # Only take one trade per ticker per day
+                            break 
+                except Exception as e:
+                    self.logger.error(f"Error scanning {ticker}: {e}")
+                    continue
         else:
-            self.logger.info(f"Max positions ({self.config.max_positions}) reached")
+            self.logger.info(f"Max positions ({self.config.max_positions}) reached. No new entries.")
 
         # Update state
         self.state.total_equity = total_equity

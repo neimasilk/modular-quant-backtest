@@ -159,7 +159,7 @@ class HybridLLMStrategy(AdaptiveStrategy):
         """
         # Simulate substance score (higher price change = higher variance in score)
         # Sometimes big moves are justified, sometimes they're noise
-        np.random.seed(int(self.data.index[-1]))  # Deterministic randomness per bar
+        np.random.seed(len(self.data))  # Deterministic randomness per bar (use bar number)
 
         # Generate substance score with realistic distribution
         if abs(price_change_pct) > 0.08:

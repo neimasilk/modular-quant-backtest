@@ -103,6 +103,24 @@
 - **Key Learning:** LLM override (contrarian dip buying) more valuable than veto (FOMO prevention)
 - **Link:** [./active/EXP-2025-009-hybrid-llm/](./active/EXP-2025-009-hybrid-llm/)
 
+## EXP-2025-010: Earnings Call Sentiment Analysis
+
+- **Date:** 2026-01-15
+- **Hypothesis:** Management tone and confidence scores in earnings calls predict next-quarter returns.
+- **Result:** TBD
+- **Outcome:** Active (Phase 1: Data Collection)
+- **Key Learning:** TBD
+- **Link:** [./active/EXP-2025-010-earnings-call/](./active/EXP-2025-010-earnings-call/)
+
+## EXP-2025-011: Multi-Agent Swarm Trading System
+
+- **Date:** 2026-01-15
+- **Hypothesis:** A swarm of 7 specialist agents with voting mechanisms will outperform single-strategy adaptive models.
+- **Result:** Avg Return +1.81% (vs -6.50%), MaxDD -16.82% (vs -20.07%), Sharpe +0.09 (vs -0.35)
+- **Outcome:** Success
+- **Key Learning:** Multi-agent voting reduces noise and overtrading while improving capture of strong trends.
+- **Link:** [./active/EXP-2025-011-swarm-intelligence/](./active/EXP-2025-011-swarm-intelligence/)
+
 ---
 
 ## Template for New Entries
@@ -136,7 +154,8 @@
 
 ### Hybrid Strategies
 *Experiments combining multiple approaches*
-- None yet
+- EXP-2025-009: Hybrid LLM (Adaptive + Sentiment)
+- EXP-2025-011: Multi-Agent Swarm (Voting System)
 
 ### Risk Management Tests
 *Experiments focused on stop-loss, position sizing, etc.*
@@ -164,7 +183,9 @@
 | `sanity-check` | News validation | EXP-2025-008 |
 | `risk-management` | Psychology & risk | EXP-2025-008, EXP-2025-009 |
 | `value-investing` | Fundamental strategies | EXP-2025-007 |
-| `hybrid` | Hybrid strategies (multiple signals) | EXP-2025-009 |
+| `hybrid` | Hybrid strategies (multiple signals) | EXP-2025-009, EXP-2025-011 |
+| `swarm` | Swarm intelligence/Multi-agent | EXP-2025-011 |
+| `earnings` | Earnings call analysis | EXP-2025-010 |
 
 ---
 

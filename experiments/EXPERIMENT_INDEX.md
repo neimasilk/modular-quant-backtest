@@ -1,7 +1,7 @@
 # Experiment Index
 
 > **Purpose:** Master index of all experiments conducted in this project
-> **Last Updated:** 2025-01-12
+> **Last Updated:** 2026-01-15
 
 ---
 
@@ -9,13 +9,14 @@
 
 | Metric | Count |
 |--------|-------|
-| Total Experiments | 8 |
-| Successful | 4 |
+| Total Experiments | 9 |
+| Successful | 5 |
 | Failed | 1 |
-| Partial | 2 |
-| Active | 1 |
+| Partial | 3 |
+| Active | 0 |
 | Completed | 3 |
 | Archived | 4 |
+| Ready for Testing | 1 |
 
 ---
 
@@ -88,10 +89,19 @@
 
 - **Date:** 2025-01-12
 - **Hypothesis:** LLM validation of news substance during extreme price moves will improve risk management and reduce FOMO/Panic decisions
-- **Result:** TBD (Shadow testing phase)
-- **Outcome:** Active
-- **Key Learning:** Different from EXP-005 - uses price trigger first, then LLM validates substance
+- **Result:** Shadow test accuracy 87.5% (8 scenarios)
+- **Outcome:** Partial
+- **Key Learning:** LLM can validate news substance, but limited testing - led to EXP-009 for full backtest
 - **Link:** [./active/EXP-2025-008-llm-sanity-check/](./active/EXP-2025-008-llm-sanity-check/)
+
+## EXP-2025-009: Hybrid LLM-Adaptive Strategy
+
+- **Date:** 2026-01-14
+- **Hypothesis:** Combining Adaptive Strategy with LLM filter will reduce drawdown 20-30% and improve Sharpe ratio 10-20%
+- **Result:** Bull 2023: +7.3% return, +47.9% Sharpe; Bear 2022: +2.7% return, +12.6% Sharpe
+- **Outcome:** Success (Backtest Phase Complete)
+- **Key Learning:** LLM override (contrarian dip buying) more valuable than veto (FOMO prevention)
+- **Link:** [./active/EXP-2025-009-hybrid-llm/](./active/EXP-2025-009-hybrid-llm/)
 
 ---
 
@@ -143,24 +153,27 @@
 
 | Tag | Description | Experiments |
 |-----|-------------|-------------|
-| `nvda` | NVIDIA-specific tests | EXP-2025-005 |
+| `nvda` | NVIDIA-specific tests | EXP-2025-005, EXP-2025-009 |
 | `spy` | S&P 500 tests | EXP-2025-001 |
 | `vix` | VIX-based strategies | EXP-2025-001 |
 | `sentiment` | Sentiment-based strategies | EXP-2025-001, EXP-2025-005 |
-| `llm` | LLM/DeepSeek integration | EXP-2025-005, EXP-2025-008 |
+| `llm` | LLM/DeepSeek integration | EXP-2025-005, EXP-2025-008, EXP-2025-009 |
 | `look-ahead-fix` | Bias fixing experiments | EXP-2025-001 |
 | `stop-loss` | Risk management tests | |
 | `walk-forward` | Walk-forward optimization | |
 | `sanity-check` | News validation | EXP-2025-008 |
-| `risk-management` | Psychology & risk | EXP-2025-008 |
+| `risk-management` | Psychology & risk | EXP-2025-008, EXP-2025-009 |
 | `value-investing` | Fundamental strategies | EXP-2025-007 |
+| `hybrid` | Hybrid strategies (multiple signals) | EXP-2025-009 |
 
 ---
 
 ## Quick Reference
 
 ### Best Performing Experiments
-1. EXP-2025-001: Sharpe 2.03, Return 17.15% (shifted sentiment)
+1. EXP-2025-004: Bear Market +13% vs -31% B&H (+44% outperformance)
+2. EXP-2025-009: +7.3% return improvement, +47.9% Sharpe improvement (bull market)
+3. EXP-2025-001: Sharpe 2.03, Return 17.15% (shifted sentiment)
 
 ### Most Informative Failures
 - EXP-2025-006: Trailing stop + ADX filter made performance WORSE (important negative result)

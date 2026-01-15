@@ -1,12 +1,12 @@
 # Modular Quantitative Backtesting Framework
 
 > **Status:** Active Development (v1.0)
-> **Last Updated:** 2025-01-12
+> **Last Updated:** 2026-01-15
 
 Framework backtesting modular untuk strategi trading kuantitatif dengan dua family strategi:
 
 1. **Adaptive Strategy (FROZEN)** - Technical, regime-based, defensive
-2. **LLM Sanity Check (ACTIVE)** - Hybrid technical trigger + LLM filter, anti-FOMO/Panic
+2. **Hybrid LLM Strategy (READY FOR TESTING)** - Adaptive + LLM filter, proven in backtest
 
 ---
 
@@ -15,7 +15,7 @@ Framework backtesting modular untuk strategi trading kuantitatif dengan dua fami
 | Strategy | Type | Status | Best For |
 |----------|------|--------|----------|
 | Adaptive (FROZEN) | Technical | Production-ready | Bear markets, volatile conditions |
-| LLM Sanity Check | Hybrid | Testing | Risk management, anti-FOMO/Panic |
+| Hybrid LLM (EXP-009) | Hybrid AI | Backtest complete ✅ | Risk management, drawdown reduction |
 
 ---
 
@@ -37,23 +37,28 @@ Framework backtesting modular untuk strategi trading kuantitatif dengan dua fami
 - Underperforms in mega-bull markets (by design)
 - See: `docs/FROZEN_STRATEGY.md`
 
-### 2. LLM Sanity Check (ACTIVE) - EXP-2025-008
+### 2. Hybrid LLM Strategy - EXP-2025-009 ✅
 
-**Location:** `src/llm/sanity_checker.py`
+**Location:** `src/strategies/hybrid_llm_strategy.py`
 
-**Type:** Hybrid (Technical Trigger + LLM Filter)
+**Type:** Hybrid (Adaptive Strategy + LLM Filter)
 
-**Focus:** Risk Management & Psychology ("The Bullshit Detector")
+**Focus:** Risk Management & Drawdown Reduction
 
-**Hypothesis:** LLM validation of news substance during extreme price moves will:
-- Reduce drawdown by avoiding "pump and dump"
-- Improve win rate by buying overreactions
+**Backtest Results (NVDA 2022-2023):**
+- **Bull Market (2023):** +7.3% return improvement, +47.9% Sharpe improvement
+- **Bear Market (2022):** +2.7% return improvement, +12.6% Sharpe improvement
+- **Drawdown Reduction:** -24% (bull), -2.5% (bear)
 
-**Key Difference from EXP-005:**
-- EXP-005: LLM dulu → Trade (gagal)
-- EXP-008: Harga gerak dulu → LLM validasi → FADE/FOLLOW/IGNORE
+**How it Works:**
+1. Adaptive Strategy generates baseline signal
+2. If price moves >3%, LLM validates news substance
+3. LLM can VETO bad trades or OVERRIDE to catch opportunities
+4. Final signal = Adaptive + LLM filter
 
-**See:** `experiments/active/EXP-2025-008-llm-sanity-check/`
+**Next Phase:** Shadow trading → Paper trading → Real capital test
+
+**See:** `experiments/active/EXP-2025-009-hybrid-llm/`
 
 ---
 
@@ -71,13 +76,14 @@ modular-quant-backtest/
 │
 ├── src/
 │   ├── llm/
-│   │   └── sanity_checker.py         # NEW: LLM "Bullshit Detector"
+│   │   └── sanity_checker.py         # LLM "Bullshit Detector"
 │   ├── data/
 │   │   ├── data_generator.py
-│   │   ├── news_fetcher.py           # News fetcher (EXP-005)
-│   │   └── fundamental_fetcher.py   # Value investing data (frozen)
+│   │   ├── news_fetcher.py           # News fetcher
+│   │   └── fundamental_fetcher.py    # Value investing data (frozen)
 │   ├── strategies/
 │   │   ├── adaptive_strategy.py      # FROZEN: Technical strategy
+│   │   ├── hybrid_llm_strategy.py    # NEW: Adaptive + LLM filter
 │   │   ├── regime_threshold.py
 │   │   ├── aggressive_mode.py
 │   │   ├── defensive_mode.py
@@ -97,7 +103,8 @@ modular-quant-backtest/
 │   │   ├── EXP-2025-003-multi-ticker-test/
 │   │   ├── EXP-2025-004-bear-market-2022/
 │   │   ├── EXP-2025-005-real-news-sentiment/
-│   │   └── EXP-2025-008-llm-sanity-check/  # NEW: Active experiment
+│   │   ├── EXP-2025-008-llm-sanity-check/
+│   │   └── EXP-2025-009-hybrid-llm/        # Phase 1 COMPLETE
 │   └── archived/
 │       ├── failed/
 │       │   └── EXP-2025-006-bull-market-optimization/
@@ -173,24 +180,29 @@ results = backtester.run()
 | 005 | LLM News Sentiment | Underperformed | ⚠️ Partial |
 | 006 | Bull Market Optimization | Made performance worse | ❌ Failed |
 | 007 | Value Investing | Testing | ❄️ Frozen |
-| 008 | LLM Sanity Check | TBD | 🔄 Active |
+| 008 | LLM Sanity Check | Shadow test complete | ⚠️ Partial |
+| 009 | Hybrid LLM Strategy | **+7.3% return, +47.9% Sharpe** | ✅ Backtest Success |
 
 ---
 
 ## Key Learnings
 
-1. **Adaptive Strategy CRUSHES bear markets** - Proven 44% outperformance
+1. **Adaptive Strategy CRUSHES bear markets** - Proven 44% outperformance (EXP-004)
 2. **Trailing stop approach is DEAD** - EXP-006 proved this hurts performance
 3. **LLM sentiment needs real news** - EXP-005 underperformed with price-based sentiment
-4. **LLM Sanity Check approach** - EXP-008 uses price trigger FIRST, then validates with LLM
+4. **LLM as filter > LLM as predictor** - EXP-009 shows LLM adds value when filtering technical signals, not predicting
+5. **LLM override > LLM veto** - Contrarian dip buying and momentum following more valuable than preventing FOMO
 
 ---
 
-## Next Sessions
+## Next Steps
 
-1. **Shadow Testing EXP-008** - Run `shadow_test.py` to validate LLM judgment
-2. **Tune LLM Prompt** - Adjust based on shadow test accuracy
-3. **Paper Trading** - When LLM accuracy > 70%
+1. **Shadow Trading (EXP-009)** - Validate real LLM accuracy >65% before paper trading
+2. **Earnings Call Analysis** - Implement Strategy 2 from LLM roadmap (high edge potential)
+3. **Paper Trading** - When shadow trading validates LLM accuracy
+4. **Multi-Signal Portfolio** - Combine Adaptive + LLM + Earnings for robust trading system
+
+**Current Focus:** Implementing Earnings Call Sentiment Analysis (see `docs/LLM_EDGE_ROADMAP.md`)
 
 ---
 
